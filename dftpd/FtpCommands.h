@@ -18,6 +18,11 @@ typedef struct {
     char *args;
 } Request;
 
+typedef struct {
+    int status;
+    char *message;
+} Response;
+
 Request ParseRequest(char *request);
 
 void OnUser(int socket, char *username);
