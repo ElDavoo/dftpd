@@ -1,3 +1,6 @@
+#include "main.h"
+#include "FtpCommands.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -13,14 +16,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "FtpCommands.h"
 
-
-int SERVER_PORT = 2123;
+// Store the path to the users file without malloc
+char users_file_path[1024];
 
 void *HandleConnection(void *socket_desc);
 
 void do_preauth_activities(int socket);
+
+int SERVER_PORT = 2123;
 
 int main(int argc, char **argv) {
     int socket_desc,
@@ -42,10 +46,6 @@ int main(int argc, char **argv) {
     char cwd[1024] = {0};
     getcwd(cwd, sizeof(cwd));
     printf("Current working dir: %s", cwd);
-
-    // Store the path to the users file without malloc
-    char users_file_path[1024] = {0};
-    strcat(users_file_path, cwd);
 
     // Get options from command line with getopt
     while ((cmd = getopt(argc, argv, "hlp:u:")) != -1) {

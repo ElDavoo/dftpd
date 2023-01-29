@@ -1,3 +1,4 @@
+#include "main.h"
 //
 // Created by Davide on 29/01/2023.
 //
@@ -6,13 +7,31 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <sys/socket.h>
 #include "FtpCommands.h"
+#include "UserTable.h"
 
 // List of commands
-char * OnUser(int socket, char *args) {
-    // send the response
-    char *response = "331 User name okay, need password.\r\n";
-    write(socket, response, strlen(response));
+void OnUser(int socket, char *username) {
+
+    // CHeck if users_file_path is set
+    if (users_file_path[0] == '\0') {
+        // Authentication is disabled, accept
+        send(socket, "230 Authentication disabled\r", 28, 0);
+        return ;
+    }
+
+    // Get the user from the file
+    User usr = GetUserFromFile(username, "users.txt");
+    if (usr.username == NULL) {
+        // Send the error
+        send(socket, "530 User not found\r", 19, 0);
+        return ;
+    }
+    // Send the success
+    send(socket, "331 User found\r", 15, 0);
+    return ;
+
 }
 
 Command cmds [] = {

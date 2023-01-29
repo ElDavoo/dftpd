@@ -6,9 +6,11 @@
 #define DFTP_FTPCOMMANDS_H
 
 
+#include "UserTable.h"
+
 typedef struct {
     char *command;
-    char *(*function)(int socket, char *args);
+    void (*function)(int socket, char *args);
 } Command;
 
 typedef struct {
@@ -18,7 +20,7 @@ typedef struct {
 
 Request ParseRequest(char *request);
 
-char * OnUser(int socket, char *args);
+void OnUser(int socket, char *username);
 
 void HandleRequest(int socket, char *request);
 
