@@ -23,6 +23,12 @@ typedef struct {
     char *message;
 } Response;
 
+// typedef enum for ascii and binary
+typedef enum {
+    ASCII,
+    BINARY
+} TransferMode;
+
 Request ParseRequest(char *request);
 
 void OnUser(int socket, char *username);

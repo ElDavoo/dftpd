@@ -1,5 +1,6 @@
 #include "main.h"
 #include "FtpCommands.h"
+#include "FileTable.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdlib.h>
 
 // Store the path to the users file without malloc
 char users_file_path[1024];
@@ -26,12 +29,19 @@ void do_preauth_activities(int socket);
 
 int SERVER_PORT = 2123;
 
+OpenedSockets *openedSockets;
+
+FileTable *file_table;
+
 int main(int argc, char **argv) {
+    srand(time(NULL));
+
     int socket_desc,
             socket_client,
             *new_sock,
             c = sizeof(struct sockaddr_in);
-
+    openedSockets = CreateOpenedSockets();
+    file_table = CreateFileTable();
     char cmd;
     struct sockaddr_in server,
             client;
@@ -134,20 +144,34 @@ void *HandleConnection(void *socket_desc) {
 
     // Infinite loop to handle requests
     while (1) {
+        int bytes_received = recv(socket, client_request, BUFSIZ, 0);
+
         // Receive a message from client
-        if (recv(socket, client_request, BUFSIZ, 0) <= 0) {
+        if (bytes_received < 0) {
             perror("recv failed");
             return 0;
-        }
-        // Detect if the client has disconnected
-        if (strlen(client_request) == 0) {
+        } else if (bytes_received == 0) {
             printf("Client disconnected");
+            // Cleanup: close all the sockets
+            for (int i = 0; i < openedSockets->size; i++) {
+                // Check if the socket has our thread id
+                if (openedSockets->sockets[i].thread_id == pthread_self()) {
+                    close(openedSockets->sockets[i].socket);
+                    openedSockets->sockets[i].socket = -1;
+                    openedSockets->sockets[i].thread_id = -1;
+                }
+            }
+
             break;
         }
+        // Detect if the client has disconnected
+        if (strlen(client_request) != 0) {
+            printf("Client request: %s", client_request);
+            // Handle the request
+            HandleRequest(socket, client_request);
+        }
 
-        printf("Client request: %s", client_request);
-        // Handle the request
-        HandleRequest(socket, client_request);
+
 
 
     }
