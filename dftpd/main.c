@@ -33,7 +33,10 @@ OpenedSockets *openedSockets;
 
 FileTable *file_table;
 
+unsigned int mystate;
+
 int main(int argc, char **argv) {
+    mystate = time(NULL) ^ getpid() ^ pthread_self();
     srand(time(NULL));
 
     int socket_desc,
@@ -111,6 +114,8 @@ int main(int argc, char **argv) {
 
     listen(socket_desc, 3);
 
+    printf("Server started on port %d\n", SERVER_PORT);
+
     while (socket_client = accept(socket_desc, (struct sockaddr *) &client, (socklen_t *) &c)) {
         if (socket_client < 0) {
             perror("Accept failed");
@@ -119,8 +124,11 @@ int main(int argc, char **argv) {
         pthread_t sniffer_thread;
         new_sock = malloc(1);
         *new_sock = socket_client;
+        // printf("New connection from
+        printf("New connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
         pthread_create(&sniffer_thread, NULL, HandleConnection, (void *) new_sock);
-        pthread_join(sniffer_thread, NULL);
+        // instead of join, detach the thread
+        pthread_detach(sniffer_thread);
     }
 
     if (socket_client < 0) {
@@ -151,7 +159,7 @@ void *HandleConnection(void *socket_desc) {
             perror("recv failed");
             return 0;
         } else if (bytes_received == 0) {
-            printf("Client disconnected");
+            printf("Client disconnected\n");
             // Cleanup: close all the sockets
             for (int i = 0; i < openedSockets->size; i++) {
                 // Check if the socket has our thread id
@@ -166,7 +174,9 @@ void *HandleConnection(void *socket_desc) {
         }
         // Detect if the client has disconnected
         if (strlen(client_request) != 0) {
-            printf("Client request: %s", client_request);
+
+
+
             // Handle the request
             HandleRequest(socket, client_request);
         }

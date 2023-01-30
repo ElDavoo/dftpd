@@ -15,4 +15,6 @@ extern OpenedSockets *openedSockets;
 
 extern FileTable *file_table;
 
+extern unsigned int mystate;
+
 #endif //DFTP_MAIN_H

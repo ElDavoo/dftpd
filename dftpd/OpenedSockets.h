@@ -8,7 +8,7 @@
 // Implement a list of opened sockets
 typedef struct {
     int thread_id;
-    int open_port;
+    unsigned short open_port;
     int socket;
 } OpenedSocket;
 
@@ -16,7 +16,7 @@ typedef struct {
     int size;
     OpenedSocket *sockets;
 } OpenedSockets;
-
+unsigned short PortFromSocket(int socket);
 OpenedSockets *CreateOpenedSockets();
 OpenedSocket *CreateOpenedSocket(int socket);
 void AddOpenedSocket(OpenedSockets *os, OpenedSocket *socket);

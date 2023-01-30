@@ -19,20 +19,25 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
+unsigned short PortFromSocket(int socket) {
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    getsockname(socket, (struct sockaddr *) &addr, &addr_size);
+    unsigned short port = ntohs(addr.sin_port);
+    return port;
+}
 
 OpenedSocket *CreateOpenedSocket(int socket) {
     OpenedSocket *os = malloc(sizeof(OpenedSocket));
     // Get the open port from the socket
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    getsockname(socket, (struct sockaddr *) &addr, &addr_size);
-    os->open_port = ntohs(addr.sin_port);
+    os->open_port = PortFromSocket(socket);
     os->socket = socket;
     // get the current thread id
     os->thread_id = (int) pthread_self();
     return os;
 }
+
+
 
 OpenedSockets *CreateOpenedSockets() {
     OpenedSockets *os = malloc(sizeof(OpenedSockets));

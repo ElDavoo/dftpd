@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include "UserTable.h"
 #include "FileTable.h"
 
@@ -160,8 +161,7 @@ void OnPasv(int sk, char *args) {
     }
     data_socket = malloc(sizeof(OpenedSocket));
 
-    // Take a random port between 50000 and 60000
-    int port = 50000 + rand() % 100;
+
     // Create the socket
     data_socket->socket = socket(AF_INET, SOCK_STREAM, 0);
     int optval = 1;
@@ -174,22 +174,27 @@ void OnPasv(int sk, char *args) {
     // Bind the socket
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
+    // Take a random port between 50000 and 60000
+    int port = 50000 + rand_r(&mystate) % 5;
     addr.sin_port = htons(port);
     // take the s_addr from sk
     struct sockaddr_in sk_addr;
     socklen_t sk_addr_len = sizeof(sk_addr);
     getsockname(sk, (struct sockaddr *) &sk_addr, &sk_addr_len);
     addr.sin_addr.s_addr = INADDR_ANY;
-    if (bind(data_socket->socket, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+    while (bind(data_socket->socket, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         perror("bind: ");
-        SendOneLineCommand(sk, 500);
-        return ;
+        // Take a random port between 50000 and 60000
+        port = 50000 + rand_r(&mystate) % 100;
+        addr.sin_port = htons(port);
     }
     // Listen
     if (listen(data_socket->socket, 1) == -1) {
         SendOneLineCommand(sk, 500);
         return ;
     }
+    printf("Thread %d, PASV: Listening on port %d\n", pthread_self() % 100, port);
+
     // Send the response
     char *response = malloc(100);
     sprintf(response, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)",
@@ -238,8 +243,21 @@ void OnList(int socket, char *args) {
     char *list = GetFilesList(file_table);
     // Close the data socket
     close(data_sk);
+    // Remove the data socket from the list
+    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    free(data_socket);
+    data_socket = NULL;
     // Send the response
     SendOneLineCommand(socket, 226);
+}
+
+void OnCwd(int socket, char *args) {
+    // Check if the root directory is asked
+    if (strcmp(args, "/") == 0) {
+        SendOneLineCommand(socket, 250);
+        return ;
+    }
+    SendOneLineCommand(socket, 502);
 }
 
 Command cmds [] = {
@@ -251,6 +269,7 @@ Command cmds [] = {
         {"PASV", OnPasv},
         {"QUIT", OnQuit},
         {"LIST", OnList},
+        {"CWD", OnCwd},
 };
 
 
@@ -289,6 +308,8 @@ void HandleRequest(int socket, char *request) {
     // We can't use sizeof because it returns the size of the pointer
     for (int i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
         if (strcmp(cmds[i].command, req.command) == 0) {
+            // print the thread, the source port and the request
+            printf("Thread %lu: %s\n", pthread_self() % 100, req.command);
             cmds[i].function(socket, req.args);
             command_found = true;
             break;
