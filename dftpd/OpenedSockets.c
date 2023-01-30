@@ -33,7 +33,7 @@ OpenedSocket *CreateOpenedSocket(int socket) {
 OpenedSockets *CreateOpenedSockets() {
     OpenedSockets *os = malloc(sizeof(OpenedSockets));
     os->size = 0;
-    os->sockets = malloc(sizeof(OpenedSocket) * os->size);
+    os->sockets = NULL;
     return os;
 }
 

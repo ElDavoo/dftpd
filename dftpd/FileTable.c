@@ -47,7 +47,7 @@ File *GetFiles(FileTable *file_table) {
 }
 
 char *GetFilesList(FileTable *file_table) {
-    char *files_list = malloc(sizeof(char) * 1);
+    char *files_list = malloc(1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
         files_list = realloc(files_list, sizeof(char) * (strlen(files_list) + strlen(file_table->files[i].name) + 2));

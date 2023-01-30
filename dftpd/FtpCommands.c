@@ -49,11 +49,13 @@ OpenedSocket *data_socket = NULL;
 TransferMode transfer_mode = ASCII;
 
 void SendToSocket(int socket, char *command) {
+    int oldlength = strlen(command);
     // Add the \r by creating a new string
-    char *new_command = malloc(strlen(command) + 2);
-    strcpy(new_command, command);
-    strcat(new_command, "\r");
-    send(socket, new_command, strlen(new_command), 0);
+    char *new_command = malloc(oldlength + 2);
+    strncpy(new_command, command, oldlength);
+    new_command[oldlength + 1] = '\0';
+    new_command[oldlength] = '\r';
+    send(socket, new_command, oldlength+1, 0);
     free(new_command);
 }
 
@@ -71,7 +73,7 @@ void SendOneLineCommand(int socket, int status){
 }
 
 void SendEndCommand(int socket, int status, char *msg) {// Prepend the status to the message
-    char *message = malloc(strlen(msg) + 4);
+    char *message = malloc(strlen(msg) + 5);
     sprintf(message, "%d %s", status, msg);
     SendToSocket(socket, message);
     free(message);
@@ -79,7 +81,7 @@ void SendEndCommand(int socket, int status, char *msg) {// Prepend the status to
 
 
 void SendStartCommand(int socket, int status, char *msg) {// Prepend the status to the message
-    char *message = malloc(strlen(msg) + 4);
+    char *message = malloc(strlen(msg) + 5);
     sprintf(message, "%d-%s", status, msg);
     SendToSocket(socket, message);
     free(message);
@@ -159,6 +161,8 @@ void OnPasv(int sk, char *args) {
         data_socket = NULL;
     }
     data_socket = malloc(sizeof(OpenedSocket));
+    data_socket->open_port = 0;
+    data_socket->socket = 0;
 
 
     // Create the socket
@@ -192,7 +196,7 @@ void OnPasv(int sk, char *args) {
         SendOneLineCommand(sk, 500);
         return ;
     }
-    printf("Thread %d, PASV: Listening on port %d\n", pthread_self() % 100, port);
+    printf("Thread %lu, PASV: Listening on port %d\n", pthread_self() % 100, port);
 
     // Send the response
     char *response = malloc(100);
@@ -250,6 +254,7 @@ void OnList(int socket, char *args) {
     // Send the list
     char *list = GetFilesList(file_table);
     SendToSocket(data_sk, list);
+    free(list);
     // Close the data socket
     shutdown(data_sk, SHUT_RDWR);
     close(data_sk);

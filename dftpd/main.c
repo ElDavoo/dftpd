@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
             return 1;
         }
         pthread_t sniffer_thread;
-        new_sock = malloc(1);
+        new_sock = malloc(sizeof *new_sock);
         *new_sock = socket_client;
         // printf("New connection from
         printf("New connection from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
