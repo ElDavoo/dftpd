@@ -50,9 +50,17 @@ char *GetFilesList(FileTable *file_table) {
     char *files_list = malloc(1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
-        files_list = realloc(files_list, sizeof(char) * (strlen(files_list) + strlen(file_table->files[i].name) + 2));
-        strcat(files_list, file_table->files[i].name);
-        strcat(files_list, "");
+        // Example strings
+        // type=file;size=3;modify=20230130164000.170;perms=awr; c
+        //type=file;size=4;modify=20230130170447.320;perms=awr; CIAO.txt
+        //type=file;size=0;modify=20230130094443.237;perms=awr; CIAO.txt.bak
+
+        char file_info[100];
+        sprintf(file_info, "type=file;size=%ld;modify=%ld;perms=awr; %s\r\n", file_table->files[i].size,
+                file_table->files[i].moddate, file_table->files[i].name);
+        files_list = realloc(files_list, sizeof(char) * (strlen(files_list) + strlen(file_info) + 1));
+        strncat(files_list, file_info, strlen(file_info));
+
     }
     return files_list;
 }
@@ -89,13 +97,13 @@ File CreateFile(char *name, ssize_t size, long moddate, char *content) {
     File file;
     // Copy the name into a new pointer
     file.name = malloc(sizeof(char) * (strlen(name) + 1));
-    strcpy(file.name, name);
-    file.name = name;
+    strncpy(file.name, name, strlen(name));
+    file.name[strlen(name)] = '\0';
     file.size = size;
     file.moddate = moddate;
     // Copy the content into a new pointer
     file.content = malloc(sizeof(char) * (strlen(content) + 1));
-    strcpy(file.content, content);
+    strncpy(file.content, content, strlen(content));
     return file;
 }
 

@@ -7,10 +7,10 @@
 
 
 #include "UserTable.h"
-
+#include <pthread.h>
 typedef struct {
     char *command;
-    void (*function)(int socket, char *args);
+    void (*function)(int socket, OpenedSocket *data_socket, char *args);
 } Command;
 
 typedef struct {
@@ -31,10 +31,10 @@ typedef enum {
 
 Request ParseRequest(char *request);
 
-void OnUser(int socket, char *username);
+void OnUser(int socket, OpenedSocket *data_socket,char *username);
 
-void HandleRequest(int socket, char *request);
+void HandleRequest(int socket, OpenedSocket *data_socket, char *request);
 
-
+extern pthread_mutex_t lock;
 
 #endif //DFTP_FTPCOMMANDS_H

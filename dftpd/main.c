@@ -133,11 +133,17 @@ void * HandleConnection(void *socket_desc) {
     // setup socket in order to recv and send
     do_preauth_activities(socket);
 
+    //init lock
+    pthread_mutex_init(&lock, NULL);
 
+    OpenedSocket data_socket;
+    data_socket.socket = -1;
+    data_socket.thread_id = -1;
+    data_socket.open_port = 0;
 
     // Infinite loop to handle requests
     while (1) {
-        ssize_t bytes_received = recv(socket, client_request, BUFSIZ, 0);
+        ssize_t bytes_received = recv(socket, client_request, BUFSIZ-1, 0);
 
         // Receive a message from client
         if (bytes_received < 0) {
@@ -163,7 +169,7 @@ void * HandleConnection(void *socket_desc) {
 
 
             // Handle the request
-            HandleRequest(socket, client_request);
+            HandleRequest(socket, &data_socket, client_request);
         }
 
 
@@ -172,6 +178,8 @@ void * HandleConnection(void *socket_desc) {
     }
 
     free(socket_desc);
+    //destroy lock
+    pthread_mutex_destroy(&lock);
     return NULL;
 }
 
