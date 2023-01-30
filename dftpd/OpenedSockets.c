@@ -1,23 +1,14 @@
 //
 // Created by Davide on 30/01/2023.
 //
-#include <malloc.h>
 #include "OpenedSockets.h"
 #include <stdio.h>
-#include <string.h>
+
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/sendfile.h>
-#include <fcntl.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <pthread.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+
 
 unsigned short PortFromSocket(int socket) {
     struct sockaddr_in addr;
@@ -74,4 +65,12 @@ void RemoveOpenedSocket(OpenedSockets *os, int open_port) {
 void DestroyOpenedSockets(OpenedSockets *os) {
     free(os->sockets);
     free(os);
+}
+
+void PrintOpenedSockets(OpenedSockets *os) {
+    printf("Opened sockets: %d\n", os->size);
+    printf("thread_id\t\topen_port\tsocket\n");
+    for (int i = 0; i < os->size; i++) {
+        printf("%d\t\t%d\t\t%d\n", os->sockets[i].thread_id, ntohs(os->sockets[i].open_port), os->sockets[i].socket);
+    }
 }

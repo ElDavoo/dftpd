@@ -5,25 +5,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/sendfile.h>
-#include <fcntl.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <pthread.h>
 #include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <time.h>
-#include <stdlib.h>
 
 // Store the path to the users file without malloc
 char users_file_path[1024];
 
-void *HandleConnection(void *socket_desc);
+void * HandleConnection(void *socket_desc);
 
 void do_preauth_activities(int socket);
 
@@ -104,7 +97,7 @@ int main(int argc, char **argv) {
     }
 
     server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_addr.s_addr = addressToListen;
     server.sin_port = htons(SERVER_PORT);
 
     if (bind(socket_desc, (struct sockaddr *) &server, sizeof(server)) < 0) {
@@ -116,7 +109,7 @@ int main(int argc, char **argv) {
 
     printf("Server started on port %d\n", SERVER_PORT);
 
-    while (socket_client = accept(socket_desc, (struct sockaddr *) &client, (socklen_t *) &c)) {
+    while ((socket_client = accept(socket_desc, (struct sockaddr *) &client, (socklen_t *) &c))) {
         if (socket_client < 0) {
             perror("Accept failed");
             return 1;
@@ -130,20 +123,12 @@ int main(int argc, char **argv) {
         // instead of join, detach the thread
         pthread_detach(sniffer_thread);
     }
-
-    if (socket_client < 0) {
-        perror("Accept failed");
-        return 1;
-    }
-
     return 0;
 }
 
-void *HandleConnection(void *socket_desc) {
+void * HandleConnection(void *socket_desc) {
     int socket = *(int *) socket_desc;
-    char server_response[BUFSIZ],
-            client_request[BUFSIZ],
-            file_name[BUFSIZ];
+    char client_request[BUFSIZ];
 
     // setup socket in order to recv and send
     do_preauth_activities(socket);
@@ -152,12 +137,12 @@ void *HandleConnection(void *socket_desc) {
 
     // Infinite loop to handle requests
     while (1) {
-        int bytes_received = recv(socket, client_request, BUFSIZ, 0);
+        ssize_t bytes_received = recv(socket, client_request, BUFSIZ, 0);
 
         // Receive a message from client
         if (bytes_received < 0) {
             perror("recv failed");
-            return 0;
+            return NULL;
         } else if (bytes_received == 0) {
             printf("Client disconnected\n");
             // Cleanup: close all the sockets
@@ -187,7 +172,7 @@ void *HandleConnection(void *socket_desc) {
     }
 
     free(socket_desc);
-    return 0;
+    return NULL;
 }
 
 void do_preauth_activities(int socket) {

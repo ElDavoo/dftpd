@@ -2,22 +2,9 @@
 // Created by Davide on 29/01/2023.
 //
 #include "FileTable.h"
-#include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/sendfile.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "FtpCommands.h"
+
 
 // Implementation of the FileTable
 FileTable *CreateFileTable() {
@@ -41,8 +28,9 @@ int FindFile(FileTable *ft, char *name) {
     }
     return -1;
 }
+
 // Get a file from the file table
-File GetFile(FileTable *file_table, char *file_name){
+File GetFile(FileTable *file_table, char *file_name) {
     int index = FindFile(file_table, file_name);
     if (index == -1) {
         File file;
@@ -52,12 +40,13 @@ File GetFile(FileTable *file_table, char *file_name){
     }
     return file_table->files[index];
 }
+
 // Get the list of files from the file table
-File *GetFiles(FileTable *file_table){
+File *GetFiles(FileTable *file_table) {
     return file_table->files;
 }
 
-char *GetFilesList(FileTable *file_table){
+char *GetFilesList(FileTable *file_table) {
     char *files_list = malloc(sizeof(char) * 1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
@@ -68,7 +57,7 @@ char *GetFilesList(FileTable *file_table){
     return files_list;
 }
 
-char *GetFilesMlsd(FileTable *file_table){
+char *GetFilesMlsd(FileTable *file_table) {
     char *files_list = malloc(sizeof(char) * 1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
@@ -85,6 +74,8 @@ void RemoveFile(FileTable *ft, char *name) {
         return;
     }
     ft->size--;
+    free(ft->files[index].name);
+    free(ft->files[index].content);
     ft->files[index] = ft->files[ft->size];
     ft->files = realloc(ft->files, sizeof(File) * ft->size);
 }
@@ -92,6 +83,20 @@ void RemoveFile(FileTable *ft, char *name) {
 void DestroyFileTable(FileTable *ft) {
     free(ft->files);
     free(ft);
+}
+
+File CreateFile(char *name, ssize_t size, long moddate, char *content) {
+    File file;
+    // Copy the name into a new pointer
+    file.name = malloc(sizeof(char) * (strlen(name) + 1));
+    strcpy(file.name, name);
+    file.name = name;
+    file.size = size;
+    file.moddate = moddate;
+    // Copy the content into a new pointer
+    file.content = malloc(sizeof(char) * (strlen(content) + 1));
+    strcpy(file.content, content);
+    return file;
 }
 
 // Implementation of the UserTable

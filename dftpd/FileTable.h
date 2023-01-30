@@ -5,11 +5,14 @@
 #ifndef DFTP_FILETABLE_H
 #define DFTP_FILETABLE_H
 
+#include <stdio.h>
+
 // Define a file, that has a name, a size, a mod date
 typedef struct {
     char *name;
-    int size;
-    char *mod_date;
+    ssize_t size;
+    long moddate;
+    void *content;
 } File;
 
 // Define a file table, that has a list of files
@@ -41,6 +44,8 @@ int GetFilesCount(FileTable *file_table);
 
 // Free the file table
 void FreeFileTable(FileTable *file_table);
+
+File CreateFile(char *name, ssize_t size, long moddate, char *content);
 
 
 

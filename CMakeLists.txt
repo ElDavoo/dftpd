@@ -9,6 +9,6 @@ set(CMAKE_C_STANDARD 23)
 
 include_directories(dftpd)
 
-add_executable(dftpd dftpd/main.c dftpd/main.h dftpd/FtpCommands.c dftpd/UserTable.c dftpd/OpenedSockets.c dftpd/OpenedSockets.h dftpd/OpenedSockets.h dftpd/FileTable.h dftpd/FileTable.c)
+add_executable(dftpd dftpd/main.c dftpd/main.h dftpd/FtpCommands.c dftpd/UserTable.c dftpd/OpenedSockets.c dftpd/OpenedSockets.h dftpd/OpenedSockets.h dftpd/FileTable.h dftpd/FileTable.c dftpd/FtpData.c dftpd/FtpData.h dftpd/FtpData.h)
 
 target_link_libraries(dftpd PRIVATE Threads::Threads)

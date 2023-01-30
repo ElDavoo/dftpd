@@ -104,7 +104,6 @@ void OnUser(int socket, char *username) {
     }
     // Send the success
     SendOneLineCommand(socket, 331);
-    return ;
 
 }
 
@@ -115,8 +114,6 @@ char *features[] = {};
 
 void OnFeat(int socket, char *args) {
     SendStartCommand(socket, 211, "Features:");
-    int a = sizeof(features);
-    int b = sizeof(features[0]);
     for (int i = 0; i < sizeof(features) / sizeof(features[0]); i++) {
         // Prepend a space and add \r to the string
         char *feature = malloc(strlen(features[i]) + 2);
@@ -151,6 +148,8 @@ void OnType(int socket, char *args) {
 }
 
 void OnPasv(int sk, char *args) {
+    //printf("Before OnPasv\n");
+    //PrintOpenedSockets(openedSockets);
     // If the data socket is already in the list, remove it
     // If the data socket is already open, close it
     if (data_socket != NULL) {
@@ -164,9 +163,9 @@ void OnPasv(int sk, char *args) {
 
     // Create the socket
     data_socket->socket = socket(AF_INET, SOCK_STREAM, 0);
-    int optval = 1;
-    setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-    setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+    // int optval = 1;
+    //setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    //setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (data_socket->socket == -1) {
         SendOneLineCommand(sk, 500);
         return ;
@@ -197,7 +196,7 @@ void OnPasv(int sk, char *args) {
 
     // Send the response
     char *response = malloc(100);
-    sprintf(response, "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)",
+    sprintf(response, "Entering Passive Mode (%d,%d,%d,%d,%d,%d)",
             (int) (sk_addr.sin_addr.s_addr & 0xFF),
             (int) ((sk_addr.sin_addr.s_addr >> 8) & 0xFF),
             (int) ((sk_addr.sin_addr.s_addr >> 16) & 0xFF),
@@ -208,7 +207,8 @@ void OnPasv(int sk, char *args) {
     free(response);
     // Add the socket to the list of sockets
     AddOpenedSocket(openedSockets, data_socket);
-
+    //printf("After OnPasv\n");
+    //PrintOpenedSockets(openedSockets);
 
 }
 
@@ -219,6 +219,62 @@ void OnQuit(int socket, char *args) {
 }
 
 void OnList(int socket, char *args) {
+    //printf("Before OnList\n");
+    //PrintOpenedSockets(openedSockets);
+    // Check if the data socket is open
+    if (data_socket == NULL) {
+        perror("data_socket == NULL");
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Check if the data socket is listening
+    if (data_socket->socket == -1) {
+        perror("data_socket->socket == -1");
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Accept the connection with timeout
+    struct timeval tv;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(data_socket->socket, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof tv);
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
+    if (data_sk == -1) {
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Send the response
+    SendOneLineCommand(socket, 150);
+    // Send the list
+    char *list = GetFilesList(file_table);
+    SendToSocket(data_sk, list);
+    // Close the data socket
+    shutdown(data_sk, SHUT_RDWR);
+    close(data_sk);
+    shutdown(data_socket->socket, SHUT_RDWR);
+    close(data_socket->socket);
+    // Remove the data socket from the list
+    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    free(data_socket);
+    data_socket = NULL;
+    // Send the response
+    SendOneLineCommand(socket, 226);
+    //printf("After OnList\n");
+    //PrintOpenedSockets(openedSockets);
+}
+
+void OnCwd(int socket, char *args) {
+    // Check if the root directory is asked
+    if (strcmp(args, "/") == 0) {
+        SendOneLineCommand(socket, 250);
+        return ;
+    }
+    SendOneLineCommand(socket, 502);
+}
+
+void OnStor(int socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
         SendOneLineCommand(socket, 425);
@@ -239,25 +295,35 @@ void OnList(int socket, char *args) {
     }
     // Send the response
     SendOneLineCommand(socket, 150);
-    // Send the list
-    char *list = GetFilesList(file_table);
+    // Receive the file here and save it into a string without calling functions
+    char *file = malloc(1000000);
+    // Fill with FF
+    memset(file, 0xFF, 1000000);
+    ssize_t file_size = 0;
+    ssize_t bytes_read = 0;
+    while ((bytes_read = recv(data_sk, file + file_size, 1000000 - file_size, 0)) > 0) {
+        file_size += bytes_read;
+    }
+    printf("Thread %lu, STOR: Received %zd bytes\n", pthread_self() % 100, file_size);
+    // printf("Thread %d, STOR: File content: %s\n", pthread_self() % 100, file);
+    // Get the current time as unix timestamp
+    time_t t = time(NULL);
+
+    // Save the file into the file table
+    File file_done = CreateFile(args, file_size, t, file);
+    AddFile(file_table, file_done);
+
     // Close the data socket
+    shutdown(data_sk, SHUT_RDWR);
     close(data_sk);
+    shutdown(data_socket->socket, SHUT_RDWR);
+    close(data_socket->socket);
     // Remove the data socket from the list
     RemoveOpenedSocket(openedSockets, data_socket->open_port);
     free(data_socket);
     data_socket = NULL;
     // Send the response
     SendOneLineCommand(socket, 226);
-}
-
-void OnCwd(int socket, char *args) {
-    // Check if the root directory is asked
-    if (strcmp(args, "/") == 0) {
-        SendOneLineCommand(socket, 250);
-        return ;
-    }
-    SendOneLineCommand(socket, 502);
 }
 
 Command cmds [] = {
@@ -270,6 +336,7 @@ Command cmds [] = {
         {"QUIT", OnQuit},
         {"LIST", OnList},
         {"CWD", OnCwd},
+        {"STOR", OnStor},
 };
 
 
