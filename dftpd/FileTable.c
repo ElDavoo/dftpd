@@ -93,6 +93,17 @@ void DestroyFileTable(FileTable *ft) {
     free(ft);
 }
 
+void RenameFile(FileTable *ft, char *from, char *to){
+    int index = FindFile(ft, from);
+    if (index == -1) {
+        return;
+    }
+    free(ft->files[index].name);
+    ft->files[index].name = calloc((strlen(to) + 1), sizeof(char));
+    strncpy(ft->files[index].name, to, strlen(to));
+    ft->files[index].name[strlen(to)] = '\0';
+}
+
 File CreateFile(char *name, ssize_t size, long moddate, char *content) {
     File file;
     // Copy the name into a new pointer

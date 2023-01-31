@@ -49,4 +49,5 @@ File CreateFile(char *name, ssize_t size, long moddate, char *content);
 
 
 int FindFile(FileTable *ft, char *name);
+void RenameFile(FileTable *ft, char *from, char *to);
 #endif //DFTP_FILETABLE_H

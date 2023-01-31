@@ -25,6 +25,7 @@ Response responses[] = {
         {211, "End"},
         {257, "\"/\" is current directory"},
         {200, "Command okay"},
+        {350, "OK to rename file"},
         {226, "Closing data connection"},
         {150, "File status okay; about to open data connection"},
         {550, "File unavailable"},
@@ -44,7 +45,7 @@ Response responses[] = {
         {553, "Requested action not taken"}
 };
 
-
+char *file_to_rename = NULL;
 
 TransferMode transfer_mode = ASCII;
 pthread_mutex_t lock;
@@ -392,6 +393,42 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     SendOneLineCommand(socket, 226);
 }
 
+void OnDele(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(file_table, args) == -1) {
+        SendOneLineCommand(socket, 550);
+        return ;
+    }
+    // Remove the file from the file table
+    RemoveFile(file_table, args);
+    SendOneLineCommand(socket, 250);
+}
+
+void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(file_table, args) == -1) {
+        SendOneLineCommand(socket, 550);
+        return ;
+    }
+    // Save the file name
+    file_to_rename = calloc(strlen(args) + 1, sizeof(char));
+    strncpy(file_to_rename, args, strlen(args));
+    SendOneLineCommand(socket, 350);
+}
+
+void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(file_table, file_to_rename) == -1) {
+        SendOneLineCommand(socket, 550);
+        return ;
+    }
+    // Rename the file
+    RenameFile(file_table, file_to_rename, args);
+    free(file_to_rename);
+    file_to_rename = NULL;
+    SendOneLineCommand(socket, 250);
+}
+
 
 Command cmds [] = {
         {"USER", OnUser},
@@ -405,6 +442,9 @@ Command cmds [] = {
         {"CWD", OnCwd},
         {"STOR", OnStor},
         {"RETR", OnRetr},
+        {"DELE", OnDele},
+        {"RNFR", OnRnfr},
+        {"RNTO", OnRnto},
 };
 
 
@@ -441,6 +481,7 @@ void HandleRequest(int socket, OpenedSocket *data_socket, char *request) {
     // Search in cmds[] the command and execute it
     // We can't use sizeof because it returns the size of the pointer
     for (int i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
+        // printf("Command: %s - %s\n", cmds[i].command, req.command);
         if (strcmp(cmds[i].command, req.command) == 0) {
             // print the thread, the source port and the request
             printf("Thread %lu: %s\n", pthread_self() % 100, req.command);
