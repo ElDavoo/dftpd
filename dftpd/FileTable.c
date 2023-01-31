@@ -102,7 +102,7 @@ File CreateFile(char *name, ssize_t size, long moddate, char *content) {
     file.size = size;
     file.moddate = moddate;
     // Copy the content into a new pointer
-    file.content = malloc(sizeof(char) * (strlen(content) + 1));
+    file.content = calloc(strlen(content) + 1, sizeof(char));
     strncpy(file.content, content, strlen(content));
     return file;
 }

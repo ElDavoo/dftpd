@@ -48,5 +48,5 @@ void FreeFileTable(FileTable *file_table);
 File CreateFile(char *name, ssize_t size, long moddate, char *content);
 
 
-
+int FindFile(FileTable *ft, char *name);
 #endif //DFTP_FILETABLE_H

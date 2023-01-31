@@ -323,6 +323,8 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     while ((bytes_read = recv(data_sk, file + file_size, 1000000 - file_size, 0)) > 0) {
         file_size += bytes_read;
     }
+    file = realloc(file, file_size + 1);
+    file[file_size] = '\0';
     printf("Thread %lu, STOR: Received %zd bytes\n", pthread_self() % 100, file_size);
     // printf("Thread %d, STOR: File content: %s\n", pthread_self() % 100, file);
     // Get the current time as YYYYMMDDHHMMSS.sss
@@ -333,6 +335,7 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     // as int
     long time = atol(s);
 
+    RemoveFile(file_table, args);
     // Save the file into the file table
     File file_done = CreateFile(args, file_size, time, file);
     AddFile(file_table, file_done);
@@ -351,6 +354,45 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     free(file);
 }
 
+void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the data socket is open
+    if (data_socket == NULL) {
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Check if the data socket is listening
+    if (data_socket->socket == -1) {
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Accept the connection
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
+    if (data_sk == -1) {
+        SendOneLineCommand(socket, 425);
+        return ;
+    }
+    // Send the response
+    SendOneLineCommand(socket, 150);
+    // Get the file from the file table
+    File file = GetFile(file_table, args);
+    // Send the file
+    send(data_sk, file.content, file.size, 0);
+    // Close the data socket
+    shutdown(data_sk, SHUT_RDWR);
+    close(data_sk);
+    shutdown(data_socket->socket, SHUT_RDWR);
+    close(data_socket->socket);
+    // Remove the data socket from the list
+    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    data_socket->socket = -1;
+    data_socket->open_port = 0;
+    // Send the response
+    SendOneLineCommand(socket, 226);
+}
+
+
 Command cmds [] = {
         {"USER", OnUser},
         {"SYST", OnSyst},
@@ -362,13 +404,14 @@ Command cmds [] = {
         {"LIST", OnList},
         {"CWD", OnCwd},
         {"STOR", OnStor},
+        {"RETR", OnRetr},
 };
 
 
 
 // Parse the request
 Request ParseRequest(char *request) {
-    Request req;
+    Request req = {NULL, NULL};
     char *token = strtok(request, " ");
     // Clean the request from \r and \n
     for (int i = 0; i < strlen(token); i++) {
@@ -376,19 +419,18 @@ Request ParseRequest(char *request) {
             token[i] = '\0';
         }
     }
-    req.command = token;
-    token = strtok(NULL, " ");
-    if (token == NULL) {
-        req.args = NULL;
-        return req;
-    }
+    req.command = calloc(strlen(token) + 1, sizeof(char));
+    strncpy(req.command, token, strlen(token));
+    // Don't use strtok, but get the rest of the string
+    token = request + strlen(token) + 1;
     // Clean the request from \r and \n
     for (int i = 0; i < strlen(token); i++) {
         if (token[i] == '\r' || token[i] == '\n') {
             token[i] = '\0';
         }
     }
-    req.args = token;
+    req.args = calloc(strlen(token) + 1, sizeof(char));
+    strncpy(req.args, token, strlen(token));
     return req;
 }
 
@@ -410,4 +452,6 @@ void HandleRequest(int socket, OpenedSocket *data_socket, char *request) {
     if (!command_found) {
         SendOneLineCommand(socket, 502);
     }
+    free(req.command);
+    free(req.args);
 }
