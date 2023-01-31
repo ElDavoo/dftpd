@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
     /* Inizializzazione lista socket aperti e tabella file */
     socketAperti = CreateOpenedSockets();
-    tabellaFile = CreateFileTable();
+    tabellaFile = CreaTabellaFile();
 
 
     if (argc > 2) {

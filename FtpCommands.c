@@ -107,12 +107,12 @@ void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
 
 void OnDele(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(tabellaFile, args) == -1) {
+    if (CercaFile(tabellaFile, args) == -1) {
         MandaRisposta(socket, 550);
         return;
     }
     // Remove the file from the file table
-    RemoveFile(tabellaFile, args);
+    RimuoviFile(tabellaFile, args);
     MandaRisposta(socket, 250);
 }
 
@@ -162,7 +162,7 @@ void OnList(int socket, OpenedSocket *data_socket, char *args) {
     }
 
     // Send the list
-    char *list = GetFilesList(tabellaFile);
+    char *list = ListaFileMlsd(tabellaFile);
     send(data_sk, list, strlen(list), 0);
     free(list);
     // Close the data socket
@@ -292,9 +292,9 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     // Send the response
     MandaRisposta(socket, 150);
     // Get the file from the file table
-    File file = GetFile(tabellaFile, args);
+    FileVirtuale file = OttieniFile(tabellaFile, args);
     // Send the file
-    send(data_sk, file.content, file.size, 0);
+    send(data_sk, file.contenuto, file.dimensione, 0);
     // Close the data socket
     shutdown(data_sk, SHUT_RDWR);
     close(data_sk);
@@ -310,11 +310,11 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
 
 void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(tabellaFile, args) == -1) {
+    if (CercaFile(tabellaFile, args) == -1) {
         MandaRisposta(socket, 550);
         return;
     }
-    // Save the file name
+    // Save the file nome
     file_to_rename = calloc(strlen(args) + 1, sizeof(char));
     strncpy(file_to_rename, args, strlen(args));
     MandaRisposta(socket, 350);
@@ -322,12 +322,12 @@ void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
 
 void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(tabellaFile, file_to_rename) == -1) {
+    if (CercaFile(tabellaFile, file_to_rename) == -1) {
         MandaRisposta(socket, 550);
         return;
     }
     // Rename the file
-    RenameFile(tabellaFile, file_to_rename, args);
+    RinominaFile(tabellaFile, file_to_rename, args);
     free(file_to_rename);
     file_to_rename = NULL;
     MandaRisposta(socket, 250);
@@ -370,7 +370,7 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     file = realloc(file, file_size + 1);
     file[file_size] = '\0';
     printf("Thread %lu, STOR: Received %zd bytes\n", pthread_self() % 100, file_size);
-    // printf("Thread %d, STOR: File content: %s\n", pthread_self() % 100, file);
+    // printf("Thread %d, STOR: FileVirtuale contenuto: %s\n", pthread_self() % 100, file);
     // Get the current time as YYYYMMDDHHMMSS.sss
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
@@ -379,10 +379,10 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     // as int
     long time = atol(s);
 
-    RemoveFile(tabellaFile, args);
+    RimuoviFile(tabellaFile, args);
     // Save the file into the file table
-    File file_done = CreateFile(args, file_size, time, file);
-    AddFile(tabellaFile, file_done);
+    FileVirtuale file_done = CreaFile(args, file_size, time, file);
+    AggiungiFile(tabellaFile, file_done);
 
     // Close the data socket
     shutdown(data_sk, SHUT_RDWR);
