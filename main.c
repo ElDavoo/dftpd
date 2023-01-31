@@ -3,7 +3,7 @@
  */
 #include "main.h"
 
-#include "WorkerThread.h"
+#include "FtpThread.h"
 
 #include <stdio.h>
 #include <string.h>

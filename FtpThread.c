@@ -8,27 +8,28 @@
 #include <sys/socket.h>
 #include <stdbool.h>
 #include "FtpCommands.h"
-#include "WorkerThread.h"
+#include "FtpThread.h"
 #include "OpenedSockets.h"
 
 #include "main.h"
 
 /* Associa un comando con la funzione che lo gestisce in FtpCommands.c */
 Command comandiGestiti[] = {
-        {"USER", OnUser},
-        {"SYST", OnSyst},
-        {"FEAT", OnFeat},
-        {"PWD",  OnPwd},
-        {"TYPE", OnType},
-        {"PASV", OnPasv},
-        {"QUIT", OnQuit},
-        {"LIST", OnList},
         {"CWD",  OnCwd},
-        {"STOR", OnStor},
-        {"RETR", OnRetr},
         {"DELE", OnDele},
+        {"FEAT", OnFeat},
+        {"LIST", OnList},
+        {"PASV", OnPasv},
+        {"PWD",  OnPwd},
+        {"QUIT", OnQuit},
+        {"RETR", OnRetr},
         {"RNFR", OnRnfr},
         {"RNTO", OnRnto},
+        {"STOR", OnStor},
+        {"SYST", OnSyst},
+        {"TYPE", OnType},
+        {"USER", OnUser},
+
 };
 
 /* Cancella i caratteri di fine riga da una stringa */
@@ -82,7 +83,7 @@ void GestisciRichiesta(int socket, OpenedSocket *data_socket, char *requ) {
         }
     }
     if (!comandoTrovato) {
-        SendOneLineCommand(socket, 502);
+        MandaRisposta(socket, 502);
     }
     free(richiesta.comando);
     free(richiesta.parametri);
@@ -93,7 +94,7 @@ void *ThreadMain(void *socket_desc) {
     char client_request[MAX_SIZE];
 
     // Stampa il messaggio di benvenuto alla connessione
-    SendOneLineCommand(socket, 220);
+    MandaRisposta(socket, 220);
 
     //init lock
     pthread_mutex_init(&lock, NULL);

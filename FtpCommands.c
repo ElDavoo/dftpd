@@ -9,7 +9,8 @@
 
 #include "FileTable.h"
 
-Response responses[] = {
+/* Lista delle risposte che il server può inviare */
+Risposta risposte[] = {
         {230, "User logged in, proceed"},
         {215, "UNIX Type: L8"},
         {211, "End"},
@@ -17,7 +18,7 @@ Response responses[] = {
         {200, "Command okay"},
         {350, "OK to rename file"},
         {226, "Closing data connection"},
-        {150, "File status okay; about to open data connection"},
+        {150, "File stato okay; about to open data connection"},
         {550, "File unavailable"},
         {250, "Requested file action okay, completed"},
         {425, "Use PASV first."},
@@ -25,67 +26,98 @@ Response responses[] = {
         {221, "Service closing control connection"},
         {500, "Syntax error, command unrecognized"},
         {502, "Command not implemented"},
-        {220, "Welcome to dftpd!"}
+        {220, "david's ftp daemon v0.1!"}
 };
 
-
+/* Lista delle funzioni che verranno mandate col comando FEAT
+ * Al momento non ci sono funzioni aggiuntive */
+char *features[] = {};
 
 char *file_to_rename = NULL;
 
 pthread_mutex_t lock;
 
-void SendToSocket(int socket, char *command) {
-    size_t oldlength = strlen(command);
-    // Add the \r by creating a new string
-    char *new_command = malloc(oldlength + 2);
-    strncpy(new_command, command, oldlength);
-    new_command[oldlength + 1] = '\0';
-    new_command[oldlength] = '\r';
-    send(socket, new_command, oldlength + 1, 0);
-    free(new_command);
+/* Manda la stringa specificata al server. Aggiunge il Carriage Return \r */
+void MandaAlSocket(int socket, char *comando) {
+    /* Viene creata una stringa temporanea */
+    size_t oldLunghezza = strlen(comando);
+    char *comandoConCR = malloc(oldLunghezza + 2);
+    strncpy(comandoConCR, comando, oldLunghezza);
+
+    /* Viene aggiunto il carattere di fine riga e un null terminate */
+    comandoConCR[oldLunghezza + 1] = '\0';
+    comandoConCR[oldLunghezza] = '\r';
+
+    /* Viene inviata la stringa e viene liberata la memoria */
+    send(socket, comandoConCR, oldLunghezza + 1, 0);
+    free(comandoConCR);
 }
 
-void SendEndCommand(int socket, int status, char *msg);
+/* Manda la risposta specificata al socket specificato.
+ * Nota che il client si aspetterà altre risposte. */
+void MandaRispostaIniziale(int socket, int codiceRisposta, char *msg) {
 
-void SendOneLineCommand(int socket, int status) {
-    // Search in responses[] the status and send it
-    for (int i = 0; i < sizeof(responses) / sizeof(responses[0]); i++) {
-        if (responses[i].status == status) {
-            SendEndCommand(socket, status, responses[i].message);
+    /* Creiamo una stringa temporanea per mettere il codice di stato e il messaggio */
+    char *messaggio = malloc(strlen(msg) + 5);
+    sprintf(messaggio, "%d-%s", codiceRisposta, msg);
+
+    /* Inviamo la stringa e liberiamo la memoria */
+    MandaAlSocket(socket, messaggio);
+    free(messaggio);
+
+}
+
+/* Manda la risposta specificata al socket specificato.
+ * Nota che il client non si aspetterà altre risposte. */
+void MandaRispostaFinale(int socket, int codiceRisposta, char *msg) {
+
+    /* Creiamo una stringa temporanea per mettere il codice di stato e il messaggio */
+    char *messaggio = malloc(strlen(msg) + 5);
+    sprintf(messaggio, "%d %s", codiceRisposta, msg);
+
+    /* Inviamo la stringa e liberiamo la memoria */
+    MandaAlSocket(socket, messaggio);
+    free(messaggio);
+
+}
+
+/* Manda una risposta singola al socket specificato */
+void MandaRisposta(int socket, int codiceRisposta) {
+    /* Cerca la risposta nella lista delle risposte */
+    for (int i = 0; i < sizeof(risposte) / sizeof(risposte[0]); i++) {
+        if (risposte[i].stato == codiceRisposta) {
+            MandaRispostaFinale(socket, codiceRisposta, risposte[i].messaggio);
             return;
         }
     }
-    SendOneLineCommand(socket, 502);
+    printf("Thread %lu\t\t: Errore: Risposta non trovata: %d\n", pthread_self(), codiceRisposta);
+    MandaRisposta(socket, 502);
 }
 
-void SendEndCommand(int socket, int status, char *msg) {// Prepend the status to the message
-    char *message = malloc(strlen(msg) + 5);
-    sprintf(message, "%d %s", status, msg);
-    SendToSocket(socket, message);
-    free(message);
+/* Implementazione dei comandi FTP */
+
+void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the root directory is asked
+    if (strcmp(args, "/") == 0) {
+        MandaRisposta(socket, 250);
+        return;
+    }
+    MandaRisposta(socket, 502);
 }
 
-
-void SendStartCommand(int socket, int status, char *msg) {// Prepend the status to the message
-    char *message = malloc(strlen(msg) + 5);
-    sprintf(message, "%d-%s", status, msg);
-    SendToSocket(socket, message);
-    free(message);
+void OnDele(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(tabellaFile, args) == -1) {
+        MandaRisposta(socket, 550);
+        return;
+    }
+    // Remove the file from the file table
+    RemoveFile(tabellaFile, args);
+    MandaRisposta(socket, 250);
 }
-
-// List of commands
-void OnUser(int socket, OpenedSocket *data_socket, char *username) {
-    SendOneLineCommand(socket, 230);
-}
-
-void OnSyst(int socket, OpenedSocket *data_socket, char *args) {
-    SendOneLineCommand(socket, 215);
-}
-
-char *features[] = {};
 
 void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
-    SendStartCommand(socket, 211, "Features:");
+    MandaRispostaIniziale(socket, 211, "Features:");
     for (int i = 0; i < sizeof(features) / sizeof(features[0]); i++) {
         // Prepend a space and add \r to the string
         char *feature = malloc(strlen(features[i]) + 2);
@@ -93,18 +125,59 @@ void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
         strcat(feature, features[i]);
         // add \r
         strcat(feature, "\r");
-        SendToSocket(socket, feature);
+        MandaAlSocket(socket, feature);
         free(feature);
     }
-    SendOneLineCommand(socket, 211);
+    MandaRisposta(socket, 211);
 }
 
-void OnPwd(int socket, OpenedSocket *data_socket, char *args) {
-    SendOneLineCommand(socket, 257);
-}
+void OnList(int socket, OpenedSocket *data_socket, char *args) {
+    //printf("Before OnList\n");
+    //PrintOpenedSockets(openedSockets);
+    // Check if the data socket is open
+    if (data_socket == NULL) {
+        perror("data_socket == NULL");
+        MandaRisposta(socket, 425);
+        return;
+    }
+    // Check if the data socket is listening
+    if (data_socket->socket == -1) {
+        perror("data_socket->socket == -1");
+        MandaRisposta(socket, 425);
+        return;
+    }
+    // Accept the connection with timeout
+    struct timeval tv;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(data_socket->socket, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof tv);
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    // Send the response
+    MandaRisposta(socket, 150);
+    int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
+    if (data_sk == -1) {
+        MandaRisposta(socket, 425);
+        return;
+    }
 
-void OnType(int socket, OpenedSocket *data_socket, char *args) {
-    SendOneLineCommand(socket, 200);
+    // Send the list
+    char *list = GetFilesList(tabellaFile);
+    send(data_sk, list, strlen(list), 0);
+    free(list);
+    // Close the data socket
+    shutdown(data_sk, SHUT_RDWR);
+    close(data_sk);
+    shutdown(data_socket->socket, SHUT_RDWR);
+    close(data_socket->socket);
+    // Remove the data socket from the list
+    RemoveOpenedSocket(socketAperti, data_socket->open_port);
+    data_socket->socket = -1;
+    data_socket->open_port = 0;
+    // Send the response
+    MandaRisposta(socket, 226);
+    //printf("After OnList\n");
+    //PrintOpenedSockets(openedSockets);
 }
 
 void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
@@ -130,7 +203,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     setsockopt(data_socket->socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (data_socket->socket == -1) {
-        SendOneLineCommand(sk, 500);
+        MandaRisposta(sk, 500);
         perror("socket: ");
         shutdown(data_socket->socket, SHUT_RDWR);
         close(data_socket->socket);
@@ -159,7 +232,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     }
     // Listen
     if (listen(data_socket->socket, 1) == -1) {
-        SendOneLineCommand(sk, 500);
+        MandaRisposta(sk, 500);
         shutdown(data_socket->socket, SHUT_RDWR);
         close(data_socket->socket);
         data_socket->socket = -1;
@@ -177,7 +250,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
             (int) ((sk_addr.sin_addr.s_addr >> 24) & 0xFF),
             (int) (port >> 8),
             (int) (port & 0xFF));
-    SendEndCommand(sk, 227, response);
+    MandaRispostaFinale(sk, 227, response);
     free(response);
     // Add the socket to the list of sockets
     AddOpenedSocket(socketAperti, data_socket);
@@ -187,46 +260,41 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
 
 }
 
+void OnPwd(int socket, OpenedSocket *data_socket, char *args) {
+    MandaRisposta(socket, 257);
+}
+
 void OnQuit(int socket, OpenedSocket *data_socket, char *args) {
-    SendOneLineCommand(socket, 221);
+    MandaRisposta(socket, 221);
     // Disconnect the client
     close(socket);
 }
 
-void OnList(int socket, OpenedSocket *data_socket, char *args) {
-    //printf("Before OnList\n");
-    //PrintOpenedSockets(openedSockets);
+void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
-        perror("data_socket == NULL");
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
     // Check if the data socket is listening
     if (data_socket->socket == -1) {
-        perror("data_socket->socket == -1");
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
-    // Accept the connection with timeout
-    struct timeval tv;
-    tv.tv_sec = 5;
-    tv.tv_usec = 0;
-    setsockopt(data_socket->socket, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof tv);
+    // Accept the connection
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
-    // Send the response
-    SendOneLineCommand(socket, 150);
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
     if (data_sk == -1) {
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
-
-    // Send the list
-    char *list = GetFilesList(tabellaFile);
-    send(data_sk, list, strlen(list), 0);
-    free(list);
+    // Send the response
+    MandaRisposta(socket, 150);
+    // Get the file from the file table
+    File file = GetFile(tabellaFile, args);
+    // Send the file
+    send(data_sk, file.content, file.size, 0);
     // Close the data socket
     shutdown(data_sk, SHUT_RDWR);
     close(data_sk);
@@ -237,29 +305,47 @@ void OnList(int socket, OpenedSocket *data_socket, char *args) {
     data_socket->socket = -1;
     data_socket->open_port = 0;
     // Send the response
-    SendOneLineCommand(socket, 226);
-    //printf("After OnList\n");
-    //PrintOpenedSockets(openedSockets);
+    MandaRisposta(socket, 226);
 }
 
-void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
-    // Check if the root directory is asked
-    if (strcmp(args, "/") == 0) {
-        SendOneLineCommand(socket, 250);
+void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(tabellaFile, args) == -1) {
+        MandaRisposta(socket, 550);
         return;
     }
-    SendOneLineCommand(socket, 502);
+    // Save the file name
+    file_to_rename = calloc(strlen(args) + 1, sizeof(char));
+    strncpy(file_to_rename, args, strlen(args));
+    MandaRisposta(socket, 350);
+}
+
+void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
+    // Check if the file exists
+    if (FindFile(tabellaFile, file_to_rename) == -1) {
+        MandaRisposta(socket, 550);
+        return;
+    }
+    // Rename the file
+    RenameFile(tabellaFile, file_to_rename, args);
+    free(file_to_rename);
+    file_to_rename = NULL;
+    MandaRisposta(socket, 250);
+}
+
+void OnSyst(int socket, OpenedSocket *data_socket, char *args) {
+    MandaRisposta(socket, 215);
 }
 
 void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
     // Check if the data socket is listening
     if (data_socket->socket == -1) {
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
     // Accept the connection
@@ -267,11 +353,11 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     socklen_t addr_len = sizeof(addr);
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
     if (data_sk == -1) {
-        SendOneLineCommand(socket, 425);
+        MandaRisposta(socket, 425);
         return;
     }
     // Send the response
-    SendOneLineCommand(socket, 150);
+    MandaRisposta(socket, 150);
     // Receive the file here and save it into a string without calling functions
     char *file = malloc(1000000);
     // Fill with FF
@@ -308,84 +394,16 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     data_socket->socket = -1;
     data_socket->open_port = 0;
     // Send the response
-    SendOneLineCommand(socket, 226);
+    MandaRisposta(socket, 226);
     free(file);
 }
 
-void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
-    // Check if the data socket is open
-    if (data_socket == NULL) {
-        SendOneLineCommand(socket, 425);
-        return;
-    }
-    // Check if the data socket is listening
-    if (data_socket->socket == -1) {
-        SendOneLineCommand(socket, 425);
-        return;
-    }
-    // Accept the connection
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
-    if (data_sk == -1) {
-        SendOneLineCommand(socket, 425);
-        return;
-    }
-    // Send the response
-    SendOneLineCommand(socket, 150);
-    // Get the file from the file table
-    File file = GetFile(tabellaFile, args);
-    // Send the file
-    send(data_sk, file.content, file.size, 0);
-    // Close the data socket
-    shutdown(data_sk, SHUT_RDWR);
-    close(data_sk);
-    shutdown(data_socket->socket, SHUT_RDWR);
-    close(data_socket->socket);
-    // Remove the data socket from the list
-    RemoveOpenedSocket(socketAperti, data_socket->open_port);
-    data_socket->socket = -1;
-    data_socket->open_port = 0;
-    // Send the response
-    SendOneLineCommand(socket, 226);
+void OnType(int socket, OpenedSocket *data_socket, char *args) {
+    MandaRisposta(socket, 200);
 }
 
-void OnDele(int socket, OpenedSocket *data_socket, char *args) {
-    // Check if the file exists
-    if (FindFile(tabellaFile, args) == -1) {
-        SendOneLineCommand(socket, 550);
-        return;
-    }
-    // Remove the file from the file table
-    RemoveFile(tabellaFile, args);
-    SendOneLineCommand(socket, 250);
+void OnUser(int socket, OpenedSocket *data_socket, char *username) {
+    MandaRisposta(socket, 230);
 }
-
-void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
-    // Check if the file exists
-    if (FindFile(tabellaFile, args) == -1) {
-        SendOneLineCommand(socket, 550);
-        return;
-    }
-    // Save the file name
-    file_to_rename = calloc(strlen(args) + 1, sizeof(char));
-    strncpy(file_to_rename, args, strlen(args));
-    SendOneLineCommand(socket, 350);
-}
-
-void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
-    // Check if the file exists
-    if (FindFile(tabellaFile, file_to_rename) == -1) {
-        SendOneLineCommand(socket, 550);
-        return;
-    }
-    // Rename the file
-    RenameFile(tabellaFile, file_to_rename, args);
-    free(file_to_rename);
-    file_to_rename = NULL;
-    SendOneLineCommand(socket, 250);
-}
-
-
 
 
