@@ -16,7 +16,7 @@
 #include <stdbool.h>
 
 /* Puntatore globale alla lista dei socket dati aperti */
-SocketAperti *socketAperti;
+ListaSocketAperto *socketAperti;
 
 /* Puntatore globale alla tabella dei file */
 TabellaFile *tabellaFile;
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     struct sockaddr_in server, client = {0};
 
     /* Inizializzazione lista socket aperti e tabella file */
-    socketAperti = CreateOpenedSockets();
+    socketAperti = CreaSocketAperti();
     tabellaFile = CreaTabellaFile();
 
 

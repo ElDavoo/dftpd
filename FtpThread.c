@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include "FtpCommands.h"
 #include "FtpThread.h"
-#include "OpenedSockets.h"
+#include "SocketAperti.h"
 
 #include "main.h"
 
@@ -67,7 +67,7 @@ Richiesta CreaRichiesta(char *request) {
 }
 
 /* Gestisce una singola richiesta */
-void GestisciRichiesta(int socket, OpenedSocket *data_socket, char *requ) {
+void GestisciRichiesta(int socket, SocketAperto *data_socket, char *requ) {
     bool comandoTrovato = false;
     Richiesta richiesta = CreaRichiesta(requ);
 
@@ -100,10 +100,10 @@ void *ThreadMain(void *socket_desc) {
     pthread_mutex_init(&lock, NULL);
 
     /* Inizializza un socket dati aperto, locale per ogni thread */
-    OpenedSocket data_socket;
+    SocketAperto data_socket;
     data_socket.socket = -1;
-    data_socket.thread_id = -1;
-    data_socket.open_port = 0;
+    data_socket.idThread = -1;
+    data_socket.porta = 0;
 
     while (1) {
 
@@ -117,14 +117,14 @@ void *ThreadMain(void *socket_desc) {
 
         } else if (bytes_received == 0) {
 
-            printf("Thread %lu: client disconnesso, pulisco ed esco\n", pthread_self() % 10000);
+            printf("Thread %lu:\tClient disconnesso, pulisco ed esco\n", pthread_self() % 10000);
 
             /* Chiudo tutti i socket aperti dal thread */
-            for (int i = 0; i < socketAperti->size; i++) {
+            for (int i = 0; i < socketAperti->dimensione; i++) {
 
-                if (socketAperti->sockets[i].thread_id == pthread_self()) {
+                if (socketAperti->sockets[i].idThread == pthread_self()) {
 
-                    RemoveOpenedSocket(socketAperti, socketAperti->sockets[i].open_port);
+                    RimuoviSocketAperto(socketAperti, socketAperti->sockets[i].porta);
 
                 }
 
@@ -138,7 +138,6 @@ void *ThreadMain(void *socket_desc) {
             /* Gestisce la richiesta del client */
             GestisciRichiesta(socket, &data_socket, client_request);
         }
-
 
     }
 

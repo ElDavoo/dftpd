@@ -1,6 +1,6 @@
 /* Implementa una semplice tabella di file
  * Questi file sono virtuali e risiedono solo nella memoria del server */
-#include "FileTable.h"
+#include "TabellaFile.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -62,7 +62,7 @@ char *ListaFileMlsd(TabellaFile *file_table) {
     files_list[0] = '\0';
     for (int i = 0; i < file_table->dimensione; i++) {
         char file_info[100];
-        sprintf(file_info, "type=file;size=%ld;modify=%ld;perms=awr; %s\r\n", file_table->files[i].dimensione,
+        sprintf(file_info, "type=file;dimensione=%ld;modify=%ld;perms=awr; %s\r\n", file_table->files[i].dimensione,
                 file_table->files[i].dataModifica, file_table->files[i].nome);
         files_list = realloc(files_list, sizeof(char) * (strlen(files_list) + strlen(file_info) + 1));
         strncat(files_list, file_info, strlen(file_info));

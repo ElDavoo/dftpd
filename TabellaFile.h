@@ -1,6 +1,6 @@
 /* Guardia per evitare che il file venga incluso più volte */
-#ifndef DFTP_FILETABLE_H
-#define DFTP_FILETABLE_H
+#ifndef DFTP_TABELLAFILE_H
+#define DFTP_TABELLAFILE_H
 
 #include <stdio.h>
 
@@ -42,4 +42,4 @@ void RimuoviFile(TabellaFile *tf, char *name);
 /* Rinomina un file */
 void RinominaFile(TabellaFile *tf, char *nomeOriginale, char *nuovoNome);
 
-#endif //DFTP_FILETABLE_H
+#endif //DFTP_TABELLAFILE_H

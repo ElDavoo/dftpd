@@ -3,7 +3,7 @@
 #define DFTP_FTPCOMMANDS_H
 
 #include <pthread.h>
-#include "OpenedSockets.h"
+#include "SocketAperti.h"
 
 /* Una richiesta è costituita dal comando e dagli eventuali parametri */
 typedef struct {
@@ -22,25 +22,25 @@ Richiesta CreaRichiesta(char *request);
 
 
 
-void GestisciRichiesta(int socket, OpenedSocket *data_socket, char *requ);
+void GestisciRichiesta(int socket, SocketAperto *data_socket, char *requ);
 
 extern pthread_mutex_t lock;
 void MandaRisposta(int socket, int codiceRisposta);
 
 /* Definisce tutte le funzioni che gestiscono i comandi*/
-void OnCwd(int socket, OpenedSocket *data_socket, char *args);
-void OnDele(int socket, OpenedSocket *data_socket, char *args);
-void OnFeat(int socket, OpenedSocket *data_socket, char *args);
-void OnMlsd(int socket, OpenedSocket *data_socket, char *args);
-void OnPasv(int socket, OpenedSocket *data_socket, char *args);
-void OnPwd(int socket, OpenedSocket *data_socket, char *args);
-void OnQuit(int socket, OpenedSocket *data_socket, char *args);
-void OnRetr(int socket, OpenedSocket *data_socket, char *args);
-void OnRnfr(int socket, OpenedSocket *data_socket, char *args);
-void OnRnto(int socket, OpenedSocket *data_socket, char *args);
-void OnStor(int socket, OpenedSocket *data_socket, char *args);
-void OnSyst(int socket, OpenedSocket *data_socket, char *args);
-void OnType(int socket, OpenedSocket *data_socket, char *args);
-void OnUser(int socket, OpenedSocket *data_socket, char *args);
+void OnCwd(int socket, SocketAperto *data_socket, char *args);
+void OnDele(int socket, SocketAperto *data_socket, char *args);
+void OnFeat(int socket, SocketAperto *data_socket, char *args);
+void OnMlsd(int socket, SocketAperto *data_socket, char *args);
+void OnPasv(int socket, SocketAperto *data_socket, char *args);
+void OnPwd(int socket, SocketAperto *data_socket, char *args);
+void OnQuit(int socket, SocketAperto *data_socket, char *args);
+void OnRetr(int socket, SocketAperto *data_socket, char *args);
+void OnRnfr(int socket, SocketAperto *data_socket, char *args);
+void OnRnto(int socket, SocketAperto *data_socket, char *args);
+void OnStor(int socket, SocketAperto *data_socket, char *args);
+void OnSyst(int socket, SocketAperto *data_socket, char *args);
+void OnType(int socket, SocketAperto *data_socket, char *args);
+void OnUser(int socket, SocketAperto *data_socket, char *args);
 
 #endif //DFTP_FTPCOMMANDS_H

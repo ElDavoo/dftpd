@@ -8,6 +8,6 @@ set(CMAKE_C_STANDARD 99)
 
 include_directories(dftpd)
 
-add_executable(dftpd main.c main.h FtpCommands.c OpenedSockets.c OpenedSockets.h OpenedSockets.h FileTable.h FileTable.c FtpThread.c FtpThread.h FtpThread.h)
+add_executable(dftpd main.c main.h FtpCommands.c SocketAperti.c SocketAperti.h SocketAperti.h TabellaFile.h TabellaFile.c FtpThread.c FtpThread.h FtpThread.h)
 
 target_link_libraries(dftpd PRIVATE Threads::Threads)

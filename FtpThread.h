@@ -14,7 +14,7 @@ void *ThreadMain(void *socket_desc);
 /* Un comando è costituito dalla stringa che lo rappresenta e dalla funzione che lo gestisce */
 typedef struct {
     char *comando;
-    void (*function)(int socket, OpenedSocket *data_socket, char *args);
+    void (*function)(int socket, SocketAperto *data_socket, char *args);
 } Command;
 
 #endif //DFTP_FTPTHREAD_H

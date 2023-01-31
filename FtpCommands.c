@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 
-#include "FileTable.h"
+#include "TabellaFile.h"
 
 /* Lista delle risposte che il server può inviare */
 Risposta risposte[] = {
@@ -31,7 +31,7 @@ Risposta risposte[] = {
 
 /* Lista delle funzioni che verranno mandate col comando FEAT
  * Al momento non ci sono funzioni aggiuntive */
-char *features[] = { "MLST type*;size*;modify*;perm*;","MLSD", };
+char *features[] = { "MLST type*;dimensione*;modify*;perm*;","MLSD", };
 
 char *file_to_rename = NULL;
 
@@ -96,7 +96,7 @@ void MandaRisposta(int socket, int codiceRisposta) {
 
 /* Implementazione dei comandi FTP */
 
-void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
+void OnCwd(int socket, SocketAperto *data_socket, char *args) {
     // Check if the root directory is asked
     if (strcmp(args, "/") == 0) {
         MandaRisposta(socket, 250);
@@ -105,7 +105,7 @@ void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 502);
 }
 
-void OnDele(int socket, OpenedSocket *data_socket, char *args) {
+void OnDele(int socket, SocketAperto *data_socket, char *args) {
     // Check if the file exists
     if (CercaFile(tabellaFile, args) == -1) {
         MandaRisposta(socket, 550);
@@ -116,7 +116,7 @@ void OnDele(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 250);
 }
 
-void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
+void OnFeat(int socket, SocketAperto *data_socket, char *args) {
     MandaRispostaIniziale(socket, 211, "Features:");
     for (int i = 0; i < sizeof(features) / sizeof(features[0]); i++) {
         // Prepend a space and add \r to the string
@@ -131,9 +131,9 @@ void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 211);
 }
 
-void OnMlsd(int socket, OpenedSocket *data_socket, char *args) {
+void OnMlsd(int socket, SocketAperto *data_socket, char *args) {
     //printf("Before OnList\n");
-    //PrintOpenedSockets(openedSockets);
+    //StampaLista(openedSockets);
     // Check if the data socket is open
     if (data_socket == NULL) {
         perror("data_socket == NULL");
@@ -171,29 +171,29 @@ void OnMlsd(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(socketAperti, data_socket->open_port);
+    RimuoviSocketAperto(socketAperti, data_socket->porta);
     data_socket->socket = -1;
-    data_socket->open_port = 0;
+    data_socket->porta = 0;
     // Send the response
     MandaRisposta(socket, 226);
     //printf("After OnList\n");
-    //PrintOpenedSockets(openedSockets);
+    //StampaLista(openedSockets);
 }
 
-void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
+void OnPasv(int sk, SocketAperto *data_socket, char *args) {
     //printf("Before OnPasv\n");
-    //PrintOpenedSockets(openedSockets);
+    //StampaLista(openedSockets);
     // If the data socket is already in the list, remove it
     // If the data socket is already open, close it
     pthread_mutex_lock(&lock);
-    if (data_socket->socket != -1 || data_socket->open_port != 0) {
-        RemoveOpenedSocket(socketAperti, data_socket->open_port);
+    if (data_socket->socket != -1 || data_socket->porta != 0) {
+        RimuoviSocketAperto(socketAperti, data_socket->porta);
         close(data_socket->socket);
         //free(data_socket);
         //data_socket = NULL;
     }
-    //data_socket = malloc(sizeof(OpenedSocket));
-    data_socket->open_port = 0;
+    //data_socket = malloc(sizeof(SocketAperto));
+    data_socket->porta = 0;
     data_socket->socket = -1;
 
 
@@ -208,7 +208,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
         shutdown(data_socket->socket, SHUT_RDWR);
         close(data_socket->socket);
         data_socket->socket = -1;
-        data_socket->open_port = 0;
+        data_socket->porta = 0;
         pthread_mutex_unlock(&lock);
         return;
     }
@@ -228,7 +228,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
         // Take a random port between 50000 and 60000
         port = 50010 + rand() % 5;
         addr.sin_port = htons(port);
-        data_socket->open_port = port;
+        data_socket->porta = port;
     }
     // Listen
     if (listen(data_socket->socket, 1) == -1) {
@@ -236,7 +236,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
         shutdown(data_socket->socket, SHUT_RDWR);
         close(data_socket->socket);
         data_socket->socket = -1;
-        data_socket->open_port = 0;
+        data_socket->porta = 0;
         return;
     }
     printf("Thread %lu, PASV: Listening on port %d\n", pthread_self() % 100, port);
@@ -255,22 +255,22 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     // Add the socket to the list of sockets
     AddOpenedSocket(socketAperti, data_socket);
     //printf("After OnPasv\n");
-    //PrintOpenedSockets(openedSockets);
+    //StampaLista(openedSockets);
     pthread_mutex_unlock(&lock);
 
 }
 
-void OnPwd(int socket, OpenedSocket *data_socket, char *args) {
+void OnPwd(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 257);
 }
 
-void OnQuit(int socket, OpenedSocket *data_socket, char *args) {
+void OnQuit(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 221);
     // Disconnect the client
     close(socket);
 }
 
-void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
+void OnRetr(int socket, SocketAperto *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
         MandaRisposta(socket, 425);
@@ -301,14 +301,14 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(socketAperti, data_socket->open_port);
+    RimuoviSocketAperto(socketAperti, data_socket->porta);
     data_socket->socket = -1;
-    data_socket->open_port = 0;
+    data_socket->porta = 0;
     // Send the response
     MandaRisposta(socket, 226);
 }
 
-void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
+void OnRnfr(int socket, SocketAperto *data_socket, char *args) {
     // Check if the file exists
     if (CercaFile(tabellaFile, args) == -1) {
         MandaRisposta(socket, 550);
@@ -320,7 +320,7 @@ void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 350);
 }
 
-void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
+void OnRnto(int socket, SocketAperto *data_socket, char *args) {
     // Check if the file exists
     if (CercaFile(tabellaFile, file_to_rename) == -1) {
         MandaRisposta(socket, 550);
@@ -333,11 +333,11 @@ void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 250);
 }
 
-void OnSyst(int socket, OpenedSocket *data_socket, char *args) {
+void OnSyst(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 215);
 }
 
-void OnStor(int socket, OpenedSocket *data_socket, char *args) {
+void OnStor(int socket, SocketAperto *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
         MandaRisposta(socket, 425);
@@ -390,19 +390,19 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(socketAperti, data_socket->open_port);
+    RimuoviSocketAperto(socketAperti, data_socket->porta);
     data_socket->socket = -1;
-    data_socket->open_port = 0;
+    data_socket->porta = 0;
     // Send the response
     MandaRisposta(socket, 226);
     free(file);
 }
 
-void OnType(int socket, OpenedSocket *data_socket, char *args) {
+void OnType(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 200);
 }
 
-void OnUser(int socket, OpenedSocket *data_socket, char *username) {
+void OnUser(int socket, SocketAperto *data_socket, char *username) {
     MandaRisposta(socket, 230);
 }
 
