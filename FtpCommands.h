@@ -2,7 +2,6 @@
 #ifndef DFTP_FTPCOMMANDS_H
 #define DFTP_FTPCOMMANDS_H
 
-#include "UserTable.h"
 #include <pthread.h>
 #include "OpenedSockets.h"
 
@@ -32,7 +31,7 @@ void MandaRisposta(int socket, int codiceRisposta);
 void OnCwd(int socket, OpenedSocket *data_socket, char *args);
 void OnDele(int socket, OpenedSocket *data_socket, char *args);
 void OnFeat(int socket, OpenedSocket *data_socket, char *args);
-void OnList(int socket, OpenedSocket *data_socket, char *args);
+void OnMlsd(int socket, OpenedSocket *data_socket, char *args);
 void OnPasv(int socket, OpenedSocket *data_socket, char *args);
 void OnPwd(int socket, OpenedSocket *data_socket, char *args);
 void OnQuit(int socket, OpenedSocket *data_socket, char *args);

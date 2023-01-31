@@ -18,7 +18,7 @@ Command comandiGestiti[] = {
         {"CWD",  OnCwd},
         {"DELE", OnDele},
         {"FEAT", OnFeat},
-        {"LIST", OnList},
+        {"MLSD", OnMlsd},
         {"PASV", OnPasv},
         {"PWD",  OnPwd},
         {"QUIT", OnQuit},
@@ -75,7 +75,7 @@ void GestisciRichiesta(int socket, OpenedSocket *data_socket, char *requ) {
     for (int i = 0; i < sizeof(comandiGestiti) / sizeof(comandiGestiti[0]); i++) {
 
         if (strcmp(comandiGestiti[i].comando, richiesta.comando) == 0) {
-            printf("Thread %lu:\t\t%s\n", pthread_self() % 10000, richiesta.comando);
+            printf("Thread %lu:\t%s\n", pthread_self() % 10000, richiesta.comando);
             /* Invoca la funzione che gestisce il comando */
             comandiGestiti[i].function(socket, data_socket, richiesta.parametri);
             comandoTrovato = true;

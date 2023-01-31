@@ -78,6 +78,6 @@ void PrintOpenedSockets(SocketAperti *os) {
     printf("Opened sockets: %d\n", os->size);
     printf("thread_id\t\topen_port\tsocket\n");
     for (int i = 0; i < os->size; i++) {
-        printf("%d\t\t%d\t\t%d\n", os->sockets[i].thread_id, ntohs(os->sockets[i].open_port), os->sockets[i].socket);
+        printf("%d\t%d\t\t%d\n", os->sockets[i].thread_id, ntohs(os->sockets[i].open_port), os->sockets[i].socket);
     }
 }

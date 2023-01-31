@@ -31,7 +31,7 @@ Risposta risposte[] = {
 
 /* Lista delle funzioni che verranno mandate col comando FEAT
  * Al momento non ci sono funzioni aggiuntive */
-char *features[] = {};
+char *features[] = { "MLST type*;size*;modify*;perm*;","MLSD", };
 
 char *file_to_rename = NULL;
 
@@ -90,7 +90,7 @@ void MandaRisposta(int socket, int codiceRisposta) {
             return;
         }
     }
-    printf("Thread %lu\t\t: Errore: Risposta non trovata: %d\n", pthread_self(), codiceRisposta);
+    printf("Thread %lu\t: Errore: Risposta non trovata: %d\n", pthread_self(), codiceRisposta);
     MandaRisposta(socket, 502);
 }
 
@@ -131,7 +131,7 @@ void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
     MandaRisposta(socket, 211);
 }
 
-void OnList(int socket, OpenedSocket *data_socket, char *args) {
+void OnMlsd(int socket, OpenedSocket *data_socket, char *args) {
     //printf("Before OnList\n");
     //PrintOpenedSockets(openedSockets);
     // Check if the data socket is open

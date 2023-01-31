@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 
     /* Crea un socket TCP IPv4, con le opzioni di riutilizzo indirizzo e porta */
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-    bool optval = true;
+    int optval = 1;
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     setsockopt(socket_desc, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 
