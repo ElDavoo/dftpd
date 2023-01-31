@@ -8,8 +8,10 @@
 
 #include "UserTable.h"
 #include <pthread.h>
+
 typedef struct {
     char *command;
+
     void (*function)(int socket, OpenedSocket *data_socket, char *args);
 } Command;
 
@@ -31,7 +33,7 @@ typedef enum {
 
 Request ParseRequest(char *request);
 
-void OnUser(int socket, OpenedSocket *data_socket,char *username);
+void OnUser(int socket, OpenedSocket *data_socket, char *username);
 
 void HandleRequest(int socket, OpenedSocket *data_socket, char *request);
 

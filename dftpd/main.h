@@ -4,6 +4,7 @@
 
 #ifndef DFTP_MAIN_H
 #define DFTP_MAIN_H
+
 #include "OpenedSockets.h"
 #include "FileTable.h"
 
@@ -16,5 +17,9 @@ extern OpenedSockets *openedSockets;
 extern FileTable *file_table;
 
 extern unsigned int mystate;
+
+void *HandleConnection(void *socket_desc);
+
+void do_preauth_activities(int socket);
 
 #endif //DFTP_MAIN_H

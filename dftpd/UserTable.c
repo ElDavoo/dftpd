@@ -6,7 +6,7 @@
 #include "UserTable.h"
 
 // Method to get the user from the file
-User GetUserFromFile (char *username, char *users_file_path) {
+User GetUserFromFile(char *username, char *users_file_path) {
     FILE *users_file = fopen(users_file_path, "r");
     User usr;
     usr.username = NULL;

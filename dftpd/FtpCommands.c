@@ -1,10 +1,4 @@
 #include "main.h"
-//
-// Created by Davide on 29/01/2023.
-//
-// List of tuples (command, function)
-// The function must return a string
-
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -14,13 +8,10 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 
-#include "UserTable.h"
 #include "FileTable.h"
 
 Response responses[] = {
         {230, "User logged in, proceed"},
-        {331, "User name okay, need password"},
-        {530, "Not logged in"},
         {215, "UNIX Type: L8"},
         {211, "End"},
         {257, "\"/\" is current directory"},
@@ -34,35 +25,28 @@ Response responses[] = {
         {226, "Closing data connection"},
         {221, "Service closing control connection"},
         {500, "Syntax error, command unrecognized"},
-        {501, "Syntax error in parameters or arguments"},
         {502, "Command not implemented"},
-        {503, "Bad sequence of commands"},
-        {504, "Command not implemented for that parameter"},
-        {530, "Not logged in"},
-        {550, "Requested action not taken"},
-        {551, "Requested action aborted: page type unknown"},
-        {552, "Requested file action aborted"},
-        {553, "Requested action not taken"}
 };
 
 char *file_to_rename = NULL;
 
 TransferMode transfer_mode = ASCII;
 pthread_mutex_t lock;
+
 void SendToSocket(int socket, char *command) {
-    int oldlength = strlen(command);
+    size_t oldlength = strlen(command);
     // Add the \r by creating a new string
     char *new_command = malloc(oldlength + 2);
     strncpy(new_command, command, oldlength);
     new_command[oldlength + 1] = '\0';
     new_command[oldlength] = '\r';
-    send(socket, new_command, oldlength+1, 0);
+    send(socket, new_command, oldlength + 1, 0);
     free(new_command);
 }
 
 void SendEndCommand(int socket, int status, char *msg);
 
-void SendOneLineCommand(int socket, int status){
+void SendOneLineCommand(int socket, int status) {
     // Search in responses[] the status and send it
     for (int i = 0; i < sizeof(responses) / sizeof(responses[0]); i++) {
         if (responses[i].status == status) {
@@ -89,33 +73,17 @@ void SendStartCommand(int socket, int status, char *msg) {// Prepend the status 
 }
 
 // List of commands
-void OnUser(int socket, OpenedSocket *data_socket,char *username) {
-
-    // CHeck if users_file_path is set
-    if (users_file_path[0] == '\0') {
-        // Authentication is disabled, accept
-        SendOneLineCommand(socket, 230);
-        return ;
-    }
-
-    // Get the user from the file
-    User usr = GetUserFromFile(username, "users.txt");
-    if (usr.username == NULL) {
-        // Send the error
-        SendOneLineCommand(socket, 530);
-        return ;
-    }
-    // Send the success
-    SendOneLineCommand(socket, 331);
-
+void OnUser(int socket, OpenedSocket *data_socket, char *username) {
+    SendOneLineCommand(socket, 230);
 }
 
-void OnSyst(int socket, OpenedSocket *data_socket,char *args) {
+void OnSyst(int socket, OpenedSocket *data_socket, char *args) {
     SendOneLineCommand(socket, 215);
 }
+
 char *features[] = {};
 
-void OnFeat(int socket,OpenedSocket *data_socket, char *args) {
+void OnFeat(int socket, OpenedSocket *data_socket, char *args) {
     SendStartCommand(socket, 211, "Features:");
     for (int i = 0; i < sizeof(features) / sizeof(features[0]); i++) {
         // Prepend a space and add \r to the string
@@ -130,27 +98,15 @@ void OnFeat(int socket,OpenedSocket *data_socket, char *args) {
     SendOneLineCommand(socket, 211);
 }
 
-void OnPwd(int socket, OpenedSocket *data_socket,char *args) {
+void OnPwd(int socket, OpenedSocket *data_socket, char *args) {
     SendOneLineCommand(socket, 257);
 }
 
-void OnType(int socket, OpenedSocket *data_socket,char *args) {
-    switch (args[0]) {
-        case 'A':
-            transfer_mode = ASCII;
-            SendOneLineCommand(socket, 200);
-            return ;
-        case 'I':
-            transfer_mode = BINARY;
-            SendOneLineCommand(socket, 200);
-            return ;
-        default:
-            SendOneLineCommand(socket, 504);
-            return ;
-    }
+void OnType(int socket, OpenedSocket *data_socket, char *args) {
+    SendOneLineCommand(socket, 200);
 }
 
-void OnPasv(int sk, OpenedSocket *data_socket,char *args) {
+void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     //printf("Before OnPasv\n");
     //PrintOpenedSockets(openedSockets);
     // If the data socket is already in the list, remove it
@@ -180,7 +136,7 @@ void OnPasv(int sk, OpenedSocket *data_socket,char *args) {
         data_socket->socket = -1;
         data_socket->open_port = 0;
         pthread_mutex_unlock(&lock);
-        return ;
+        return;
     }
     // Bind the socket
     struct sockaddr_in addr;
@@ -207,7 +163,7 @@ void OnPasv(int sk, OpenedSocket *data_socket,char *args) {
         close(data_socket->socket);
         data_socket->socket = -1;
         data_socket->open_port = 0;
-        return ;
+        return;
     }
     printf("Thread %lu, PASV: Listening on port %d\n", pthread_self() % 100, port);
 
@@ -230,26 +186,26 @@ void OnPasv(int sk, OpenedSocket *data_socket,char *args) {
 
 }
 
-void OnQuit(int socket, OpenedSocket *data_socket,char *args) {
+void OnQuit(int socket, OpenedSocket *data_socket, char *args) {
     SendOneLineCommand(socket, 221);
     // Disconnect the client
     close(socket);
 }
 
-void OnList(int socket, OpenedSocket *data_socket,char *args) {
+void OnList(int socket, OpenedSocket *data_socket, char *args) {
     //printf("Before OnList\n");
     //PrintOpenedSockets(openedSockets);
     // Check if the data socket is open
     if (data_socket == NULL) {
         perror("data_socket == NULL");
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Check if the data socket is listening
     if (data_socket->socket == -1) {
         perror("data_socket->socket == -1");
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Accept the connection with timeout
     struct timeval tv;
@@ -263,7 +219,7 @@ void OnList(int socket, OpenedSocket *data_socket,char *args) {
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
     if (data_sk == -1) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
 
     // Send the list
@@ -285,11 +241,11 @@ void OnList(int socket, OpenedSocket *data_socket,char *args) {
     //PrintOpenedSockets(openedSockets);
 }
 
-void OnCwd(int socket, OpenedSocket *data_socket,char *args) {
+void OnCwd(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the root directory is asked
     if (strcmp(args, "/") == 0) {
         SendOneLineCommand(socket, 250);
-        return ;
+        return;
     }
     SendOneLineCommand(socket, 502);
 }
@@ -298,12 +254,12 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Check if the data socket is listening
     if (data_socket->socket == -1) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Accept the connection
     struct sockaddr_in addr;
@@ -311,7 +267,7 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
     if (data_sk == -1) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Send the response
     SendOneLineCommand(socket, 150);
@@ -359,12 +315,12 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the data socket is open
     if (data_socket == NULL) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Check if the data socket is listening
     if (data_socket->socket == -1) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Accept the connection
     struct sockaddr_in addr;
@@ -372,7 +328,7 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
     if (data_sk == -1) {
         SendOneLineCommand(socket, 425);
-        return ;
+        return;
     }
     // Send the response
     SendOneLineCommand(socket, 150);
@@ -397,7 +353,7 @@ void OnDele(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
     if (FindFile(file_table, args) == -1) {
         SendOneLineCommand(socket, 550);
-        return ;
+        return;
     }
     // Remove the file from the file table
     RemoveFile(file_table, args);
@@ -408,7 +364,7 @@ void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
     if (FindFile(file_table, args) == -1) {
         SendOneLineCommand(socket, 550);
-        return ;
+        return;
     }
     // Save the file name
     file_to_rename = calloc(strlen(args) + 1, sizeof(char));
@@ -420,7 +376,7 @@ void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
     if (FindFile(file_table, file_to_rename) == -1) {
         SendOneLineCommand(socket, 550);
-        return ;
+        return;
     }
     // Rename the file
     RenameFile(file_table, file_to_rename, args);
@@ -430,23 +386,22 @@ void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
 }
 
 
-Command cmds [] = {
+Command cmds[] = {
         {"USER", OnUser},
         {"SYST", OnSyst},
         {"FEAT", OnFeat},
-        {"PWD", OnPwd},
+        {"PWD",  OnPwd},
         {"TYPE", OnType},
         {"PASV", OnPasv},
         {"QUIT", OnQuit},
         {"LIST", OnList},
-        {"CWD", OnCwd},
+        {"CWD",  OnCwd},
         {"STOR", OnStor},
         {"RETR", OnRetr},
         {"DELE", OnDele},
         {"RNFR", OnRnfr},
         {"RNTO", OnRnto},
 };
-
 
 
 // Parse the request

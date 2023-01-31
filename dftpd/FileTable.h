@@ -32,13 +32,16 @@ void RemoveFile(FileTable *file_table, char *file_name);
 
 // Get a file from the file table
 File GetFile(FileTable *file_table, char *file_name);
+
 FileTable *CreateFileTable();
+
 // Get the list of files from the file table
 File *GetFiles(FileTable *file_table);
 
 char *GetFilesMlsd(FileTable *file_table);
 
 char *GetFilesList(FileTable *file_table);
+
 // Get the number of files in the file table
 int GetFilesCount(FileTable *file_table);
 
@@ -49,5 +52,7 @@ File CreateFile(char *name, ssize_t size, long moddate, char *content);
 
 
 int FindFile(FileTable *ft, char *name);
+
 void RenameFile(FileTable *ft, char *from, char *to);
+
 #endif //DFTP_FILETABLE_H

@@ -10,5 +10,6 @@ typedef struct {
     char *password;
 } User;
 
-User GetUserFromFile (char *username, char *users_file_path);
+User GetUserFromFile(char *username, char *users_file_path);
+
 #endif //DFTP_USERTABLE_H

@@ -13,12 +13,6 @@
 #include <ctype.h>
 #include <time.h>
 
-// Store the path to the users file without malloc
-char users_file_path[1024];
-
-void * HandleConnection(void *socket_desc);
-
-void do_preauth_activities(int socket);
 
 int SERVER_PORT = 2123;
 
@@ -57,17 +51,14 @@ int main(int argc, char **argv) {
     while ((cmd = getopt(argc, argv, "hlp:u:")) != -1) {
         switch (cmd) {
             case 'h':
-                printf("Usage: %s [-p port]", argv[0]);
+                printf("Usage: %s [-l] [-p port]\n"
+                       "", argv[0]);
                 return 0;
             case 'l':
                 addressToListen = INADDR_LOOPBACK;
                 return 0;
             case 'p':
                 SERVER_PORT = atoi(optarg);
-                break;
-            case 'u':
-                strcat(users_file_path, cwd);
-                strcat(users_file_path, optarg);
                 break;
             case '?':
                 if (optopt == 'p')
@@ -126,7 +117,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void * HandleConnection(void *socket_desc) {
+void *HandleConnection(void *socket_desc) {
     int socket = *(int *) socket_desc;
     char client_request[BUFSIZ];
 
@@ -143,7 +134,7 @@ void * HandleConnection(void *socket_desc) {
 
     // Infinite loop to handle requests
     while (1) {
-        ssize_t bytes_received = recv(socket, client_request, BUFSIZ-1, 0);
+        ssize_t bytes_received = recv(socket, client_request, BUFSIZ - 1, 0);
 
         // Receive a message from client
         if (bytes_received < 0) {
@@ -171,8 +162,6 @@ void * HandleConnection(void *socket_desc) {
             // Handle the request
             HandleRequest(socket, &data_socket, client_request);
         }
-
-
 
 
     }

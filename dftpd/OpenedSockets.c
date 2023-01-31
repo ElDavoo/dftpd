@@ -29,7 +29,6 @@ OpenedSocket *CreateOpenedSocket(int socket) {
 }
 
 
-
 OpenedSockets *CreateOpenedSockets() {
     OpenedSockets *os = malloc(sizeof(OpenedSockets));
     os->size = 0;

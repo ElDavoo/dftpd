@@ -93,7 +93,7 @@ void DestroyFileTable(FileTable *ft) {
     free(ft);
 }
 
-void RenameFile(FileTable *ft, char *from, char *to){
+void RenameFile(FileTable *ft, char *from, char *to) {
     int index = FindFile(ft, from);
     if (index == -1) {
         return;

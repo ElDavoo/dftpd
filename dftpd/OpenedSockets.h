@@ -16,11 +16,19 @@ typedef struct {
     int size;
     OpenedSocket *sockets;
 } OpenedSockets;
+
 unsigned short PortFromSocket(int socket);
+
 OpenedSockets *CreateOpenedSockets();
+
 OpenedSocket *CreateOpenedSocket(int socket);
+
 void AddOpenedSocket(OpenedSockets *os, OpenedSocket *socket);
+
 int FindOpenedSocketByPort(OpenedSockets *os, int open_port);
+
 void RemoveOpenedSocket(OpenedSockets *os, int open_port);
+
 void PrintOpenedSockets(OpenedSockets *os);
+
 #endif //DFTP_OPENEDSOCKETS_H
