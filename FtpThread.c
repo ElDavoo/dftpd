@@ -75,7 +75,7 @@ void GestisciRichiesta(int socket, SocketAperto *data_socket, char *requ) {
     for (int i = 0; i < sizeof(comandiGestiti) / sizeof(comandiGestiti[0]); i++) {
 
         if (strcmp(comandiGestiti[i].comando, richiesta.comando) == 0) {
-            printf("Thread %lu:\t%s\n", pthread_self() % 10000, richiesta.comando);
+            printf("Thread %4lu:\t%s\n", pthread_self() % 10000, richiesta.comando);
             /* Invoca la funzione che gestisce il comando */
             comandiGestiti[i].function(socket, data_socket, richiesta.parametri);
             comandoTrovato = true;
@@ -102,7 +102,7 @@ void *ThreadMain(void *socket_desc) {
     /* Inizializza un socket dati aperto, locale per ogni thread */
     SocketAperto data_socket;
     data_socket.socket = -1;
-    data_socket.idThread = -1;
+    data_socket.idThread = pthread_self();
     data_socket.porta = 0;
 
     while (1) {
@@ -117,7 +117,13 @@ void *ThreadMain(void *socket_desc) {
 
         } else if (bytes_received == 0) {
 
-            printf("Thread %lu:\tClient disconnesso, pulisco ed esco\n", pthread_self() % 10000);
+            printf("Thread %4lu:\tClient disconnesso, pulisco ed esco\n", pthread_self() % 10000);
+            /* Controlla se c'era un file che stava venendo rinominato */
+            if (file_to_rename != NULL) {
+                pthread_mutex_unlock(&file_to_rename_lock);
+                free(file_to_rename);
+                file_to_rename = NULL;
+            }
 
             /* Chiudo tutti i socket aperti dal thread */
             for (int i = 0; i < socketAperti->dimensione; i++) {
@@ -141,7 +147,7 @@ void *ThreadMain(void *socket_desc) {
 
     }
 
-    /* Distrugge il software ed esce dal thread */
+    /* Distrugge il socket ed esce dal thread */
     free(socket_desc);
     pthread_mutex_destroy(&lock);
     return NULL;

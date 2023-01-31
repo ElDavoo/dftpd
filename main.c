@@ -33,8 +33,9 @@ int main(int argc, char **argv) {
 
     /* Variabili locali */
     int socket_client = -1;
-    int socket_desc, *new_sock, c;
+    int socket_desc, *new_sock;
     struct sockaddr_in server, client = {0};
+    int c = sizeof(struct sockaddr_in);
 
     /* Inizializzazione lista socket aperti e tabella file */
     socketAperti = CreaSocketAperti();
