@@ -38,5 +38,6 @@ void OnUser(int socket, OpenedSocket *data_socket, char *username);
 void HandleRequest(int socket, OpenedSocket *data_socket, char *request);
 
 extern pthread_mutex_t lock;
+void SendOneLineCommand(int socket, int status);
 
 #endif //DFTP_FTPCOMMANDS_H

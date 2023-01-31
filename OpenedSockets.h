@@ -15,20 +15,20 @@ typedef struct {
 typedef struct {
     int size;
     OpenedSocket *sockets;
-} OpenedSockets;
+} SocketAperti;
 
 unsigned short PortFromSocket(int socket);
 
-OpenedSockets *CreateOpenedSockets();
+SocketAperti *CreateOpenedSockets();
 
 OpenedSocket *CreateOpenedSocket(int socket);
 
-void AddOpenedSocket(OpenedSockets *os, OpenedSocket *socket);
+void AddOpenedSocket(SocketAperti *os, OpenedSocket *socket);
 
-int FindOpenedSocketByPort(OpenedSockets *os, int open_port);
+int FindOpenedSocketByPort(SocketAperti *os, int open_port);
 
-void RemoveOpenedSocket(OpenedSockets *os, int open_port);
+void RemoveOpenedSocket(SocketAperti *os, int open_port);
 
-void PrintOpenedSockets(OpenedSockets *os);
+void PrintOpenedSockets(SocketAperti *os);
 
 #endif //DFTP_OPENEDSOCKETS_H

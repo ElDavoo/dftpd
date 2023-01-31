@@ -19,40 +19,40 @@ typedef struct {
 typedef struct {
     File *files;
     int size;
-} FileTable;
+} TabellaFile;
 
 // Create a new file table
-FileTable *NewFileTable();
+TabellaFile *NewFileTable();
 
 // Add a file to the file table
-void AddFile(FileTable *file_table, File file);
+void AddFile(TabellaFile *file_table, File file);
 
 // Remove a file from the file table
-void RemoveFile(FileTable *file_table, char *file_name);
+void RemoveFile(TabellaFile *file_table, char *file_name);
 
 // Get a file from the file table
-File GetFile(FileTable *file_table, char *file_name);
+File GetFile(TabellaFile *file_table, char *file_name);
 
-FileTable *CreateFileTable();
+TabellaFile *CreateFileTable();
 
 // Get the list of files from the file table
-File *GetFiles(FileTable *file_table);
+File *GetFiles(TabellaFile *file_table);
 
-char *GetFilesMlsd(FileTable *file_table);
+char *GetFilesMlsd(TabellaFile *file_table);
 
-char *GetFilesList(FileTable *file_table);
+char *GetFilesList(TabellaFile *file_table);
 
 // Get the number of files in the file table
-int GetFilesCount(FileTable *file_table);
+int GetFilesCount(TabellaFile *file_table);
 
 // Free the file table
-void FreeFileTable(FileTable *file_table);
+void FreeFileTable(TabellaFile *file_table);
 
 File CreateFile(char *name, ssize_t size, long moddate, char *content);
 
 
-int FindFile(FileTable *ft, char *name);
+int FindFile(TabellaFile *ft, char *name);
 
-void RenameFile(FileTable *ft, char *from, char *to);
+void RenameFile(TabellaFile *ft, char *from, char *to);
 
 #endif //DFTP_FILETABLE_H

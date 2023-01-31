@@ -7,20 +7,20 @@
 
 
 // Implementation of the FileTable
-FileTable *CreateFileTable() {
-    FileTable *ft = malloc(sizeof(FileTable));
+TabellaFile *CreateFileTable() {
+    TabellaFile *ft = malloc(sizeof(TabellaFile));
     ft->size = 0;
     ft->files = malloc(sizeof(File) * ft->size);
     return ft;
 }
 
-void AddFile(FileTable *ft, File file) {
+void AddFile(TabellaFile *ft, File file) {
     ft->size++;
     ft->files = realloc(ft->files, sizeof(File) * ft->size);
     ft->files[ft->size - 1] = file;
 }
 
-int FindFile(FileTable *ft, char *name) {
+int FindFile(TabellaFile *ft, char *name) {
     for (int i = 0; i < ft->size; i++) {
         if (strcmp(ft->files[i].name, name) == 0) {
             return i;
@@ -30,7 +30,7 @@ int FindFile(FileTable *ft, char *name) {
 }
 
 // Get a file from the file table
-File GetFile(FileTable *file_table, char *file_name) {
+File GetFile(TabellaFile *file_table, char *file_name) {
     int index = FindFile(file_table, file_name);
     if (index == -1) {
         File file;
@@ -42,11 +42,11 @@ File GetFile(FileTable *file_table, char *file_name) {
 }
 
 // Get the list of files from the file table
-File *GetFiles(FileTable *file_table) {
+File *GetFiles(TabellaFile *file_table) {
     return file_table->files;
 }
 
-char *GetFilesList(FileTable *file_table) {
+char *GetFilesList(TabellaFile *file_table) {
     char *files_list = malloc(1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
@@ -65,7 +65,7 @@ char *GetFilesList(FileTable *file_table) {
     return files_list;
 }
 
-char *GetFilesMlsd(FileTable *file_table) {
+char *GetFilesMlsd(TabellaFile *file_table) {
     char *files_list = malloc(sizeof(char) * 1);
     files_list[0] = '\0';
     for (int i = 0; i < file_table->size; i++) {
@@ -76,7 +76,7 @@ char *GetFilesMlsd(FileTable *file_table) {
     return files_list;
 }
 
-void RemoveFile(FileTable *ft, char *name) {
+void RemoveFile(TabellaFile *ft, char *name) {
     int index = FindFile(ft, name);
     if (index == -1) {
         return;
@@ -88,12 +88,12 @@ void RemoveFile(FileTable *ft, char *name) {
     ft->files = realloc(ft->files, sizeof(File) * ft->size);
 }
 
-void DestroyFileTable(FileTable *ft) {
+void DestroyFileTable(TabellaFile *ft) {
     free(ft->files);
     free(ft);
 }
 
-void RenameFile(FileTable *ft, char *from, char *to) {
+void RenameFile(TabellaFile *ft, char *from, char *to) {
     int index = FindFile(ft, from);
     if (index == -1) {
         return;

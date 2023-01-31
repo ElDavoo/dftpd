@@ -29,20 +29,20 @@ OpenedSocket *CreateOpenedSocket(int socket) {
 }
 
 
-OpenedSockets *CreateOpenedSockets() {
-    OpenedSockets *os = malloc(sizeof(OpenedSockets));
+SocketAperti *CreateOpenedSockets() {
+    SocketAperti *os = malloc(sizeof(SocketAperti));
     os->size = 0;
     os->sockets = NULL;
     return os;
 }
 
-void AddOpenedSocket(OpenedSockets *os, OpenedSocket *socket) {
+void AddOpenedSocket(SocketAperti *os, OpenedSocket *socket) {
     os->size++;
     os->sockets = realloc(os->sockets, sizeof(OpenedSocket) * os->size);
     os->sockets[os->size - 1] = *socket;
 }
 
-int FindOpenedSocketByPort(OpenedSockets *os, int open_port) {
+int FindOpenedSocketByPort(SocketAperti *os, int open_port) {
     for (int i = 0; i < os->size; i++) {
         if (os->sockets[i].open_port == open_port) {
             return i;
@@ -51,7 +51,7 @@ int FindOpenedSocketByPort(OpenedSockets *os, int open_port) {
     return -1;
 }
 
-void RemoveOpenedSocket(OpenedSockets *os, int open_port) {
+void RemoveOpenedSocket(SocketAperti *os, int open_port) {
     int index = FindOpenedSocketByPort(os, open_port);
     if (index == -1) {
         return;
@@ -61,12 +61,12 @@ void RemoveOpenedSocket(OpenedSockets *os, int open_port) {
     os->sockets = realloc(os->sockets, sizeof(OpenedSocket) * os->size);
 }
 
-void DestroyOpenedSockets(OpenedSockets *os) {
+void DestroyOpenedSockets(SocketAperti *os) {
     free(os->sockets);
     free(os);
 }
 
-void PrintOpenedSockets(OpenedSockets *os) {
+void PrintOpenedSockets(SocketAperti *os) {
     printf("Opened sockets: %d\n", os->size);
     printf("thread_id\t\topen_port\tsocket\n");
     for (int i = 0; i < os->size; i++) {

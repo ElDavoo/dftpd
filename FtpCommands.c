@@ -26,6 +26,7 @@ Response responses[] = {
         {221, "Service closing control connection"},
         {500, "Syntax error, command unrecognized"},
         {502, "Command not implemented"},
+        {220, "Welcome to dftpd!"}
 };
 
 char *file_to_rename = NULL;
@@ -113,7 +114,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     // If the data socket is already open, close it
     pthread_mutex_lock(&lock);
     if (data_socket->socket != -1 || data_socket->open_port != 0) {
-        RemoveOpenedSocket(openedSockets, data_socket->open_port);
+        RemoveOpenedSocket(socketAperti, data_socket->open_port);
         close(data_socket->socket);
         //free(data_socket);
         //data_socket = NULL;
@@ -142,7 +143,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     // Take a random port between 50000 and 60000
-    int port = 50010 + rand_r(&mystate) % 5;
+    int port = 50010 + rand() % 5;
     addr.sin_port = htons(port);
     // take the s_addr from sk
     struct sockaddr_in sk_addr;
@@ -152,7 +153,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     while (bind(data_socket->socket, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
         perror("bind: ");
         // Take a random port between 50000 and 60000
-        port = 50010 + rand_r(&mystate) % 5;
+        port = 50010 + rand() % 5;
         addr.sin_port = htons(port);
         data_socket->open_port = port;
     }
@@ -179,7 +180,7 @@ void OnPasv(int sk, OpenedSocket *data_socket, char *args) {
     SendEndCommand(sk, 227, response);
     free(response);
     // Add the socket to the list of sockets
-    AddOpenedSocket(openedSockets, data_socket);
+    AddOpenedSocket(socketAperti, data_socket);
     //printf("After OnPasv\n");
     //PrintOpenedSockets(openedSockets);
     pthread_mutex_unlock(&lock);
@@ -223,7 +224,7 @@ void OnList(int socket, OpenedSocket *data_socket, char *args) {
     }
 
     // Send the list
-    char *list = GetFilesList(file_table);
+    char *list = GetFilesList(tabellaFile);
     send(data_sk, list, strlen(list), 0);
     free(list);
     // Close the data socket
@@ -232,7 +233,7 @@ void OnList(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    RemoveOpenedSocket(socketAperti, data_socket->open_port);
     data_socket->socket = -1;
     data_socket->open_port = 0;
     // Send the response
@@ -292,10 +293,10 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     // as int
     long time = atol(s);
 
-    RemoveFile(file_table, args);
+    RemoveFile(tabellaFile, args);
     // Save the file into the file table
     File file_done = CreateFile(args, file_size, time, file);
-    AddFile(file_table, file_done);
+    AddFile(tabellaFile, file_done);
 
     // Close the data socket
     shutdown(data_sk, SHUT_RDWR);
@@ -303,7 +304,7 @@ void OnStor(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    RemoveOpenedSocket(socketAperti, data_socket->open_port);
     data_socket->socket = -1;
     data_socket->open_port = 0;
     // Send the response
@@ -333,7 +334,7 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     // Send the response
     SendOneLineCommand(socket, 150);
     // Get the file from the file table
-    File file = GetFile(file_table, args);
+    File file = GetFile(tabellaFile, args);
     // Send the file
     send(data_sk, file.content, file.size, 0);
     // Close the data socket
@@ -342,7 +343,7 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
     shutdown(data_socket->socket, SHUT_RDWR);
     close(data_socket->socket);
     // Remove the data socket from the list
-    RemoveOpenedSocket(openedSockets, data_socket->open_port);
+    RemoveOpenedSocket(socketAperti, data_socket->open_port);
     data_socket->socket = -1;
     data_socket->open_port = 0;
     // Send the response
@@ -351,18 +352,18 @@ void OnRetr(int socket, OpenedSocket *data_socket, char *args) {
 
 void OnDele(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(file_table, args) == -1) {
+    if (FindFile(tabellaFile, args) == -1) {
         SendOneLineCommand(socket, 550);
         return;
     }
     // Remove the file from the file table
-    RemoveFile(file_table, args);
+    RemoveFile(tabellaFile, args);
     SendOneLineCommand(socket, 250);
 }
 
 void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(file_table, args) == -1) {
+    if (FindFile(tabellaFile, args) == -1) {
         SendOneLineCommand(socket, 550);
         return;
     }
@@ -374,12 +375,12 @@ void OnRnfr(int socket, OpenedSocket *data_socket, char *args) {
 
 void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
     // Check if the file exists
-    if (FindFile(file_table, file_to_rename) == -1) {
+    if (FindFile(tabellaFile, file_to_rename) == -1) {
         SendOneLineCommand(socket, 550);
         return;
     }
     // Rename the file
-    RenameFile(file_table, file_to_rename, args);
+    RenameFile(tabellaFile, file_to_rename, args);
     free(file_to_rename);
     file_to_rename = NULL;
     SendOneLineCommand(socket, 250);
