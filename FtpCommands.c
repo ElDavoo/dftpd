@@ -4,7 +4,6 @@
 #include <sys/socket.h>
 #include <malloc.h>
 #include "FtpCommands.h"
-#include <stdbool.h>
 #include <stdlib.h>
 #include <netinet/in.h>
 
@@ -29,9 +28,10 @@ Response responses[] = {
         {220, "Welcome to dftpd!"}
 };
 
+
+
 char *file_to_rename = NULL;
 
-TransferMode transfer_mode = ASCII;
 pthread_mutex_t lock;
 
 void SendToSocket(int socket, char *command) {
@@ -387,68 +387,5 @@ void OnRnto(int socket, OpenedSocket *data_socket, char *args) {
 }
 
 
-Command cmds[] = {
-        {"USER", OnUser},
-        {"SYST", OnSyst},
-        {"FEAT", OnFeat},
-        {"PWD",  OnPwd},
-        {"TYPE", OnType},
-        {"PASV", OnPasv},
-        {"QUIT", OnQuit},
-        {"LIST", OnList},
-        {"CWD",  OnCwd},
-        {"STOR", OnStor},
-        {"RETR", OnRetr},
-        {"DELE", OnDele},
-        {"RNFR", OnRnfr},
-        {"RNTO", OnRnto},
-};
 
 
-// Parse the request
-Request ParseRequest(char *request) {
-    Request req = {NULL, NULL};
-    char *token = strtok(request, " ");
-    // Clean the request from \r and \n
-    for (int i = 0; i < strlen(token); i++) {
-        if (token[i] == '\r' || token[i] == '\n') {
-            token[i] = '\0';
-        }
-    }
-    req.command = calloc(strlen(token) + 1, sizeof(char));
-    strncpy(req.command, token, strlen(token));
-    // Don't use strtok, but get the rest of the string
-    token = request + strlen(token) + 1;
-    // Clean the request from \r and \n
-    for (int i = 0; i < strlen(token); i++) {
-        if (token[i] == '\r' || token[i] == '\n') {
-            token[i] = '\0';
-        }
-    }
-    req.args = calloc(strlen(token) + 1, sizeof(char));
-    strncpy(req.args, token, strlen(token));
-    return req;
-}
-
-void HandleRequest(int socket, OpenedSocket *data_socket, char *request) {
-    bool command_found = false;
-    // Parse the request
-    Request req = ParseRequest(request);
-    // Search in cmds[] the command and execute it
-    // We can't use sizeof because it returns the size of the pointer
-    for (int i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
-        // printf("Command: %s - %s\n", cmds[i].command, req.command);
-        if (strcmp(cmds[i].command, req.command) == 0) {
-            // print the thread, the source port and the request
-            printf("Thread %lu: %s\n", pthread_self() % 100, req.command);
-            cmds[i].function(socket, data_socket, req.args);
-            command_found = true;
-            break;
-        }
-    }
-    if (!command_found) {
-        SendOneLineCommand(socket, 502);
-    }
-    free(req.command);
-    free(req.args);
-}

@@ -14,6 +14,4 @@ extern TabellaFile *tabellaFile;
 /* Lo stato del generatore di numeri casuali */
 extern unsigned int mystate;
 
-
-
 #endif //DFTP_MAIN_H

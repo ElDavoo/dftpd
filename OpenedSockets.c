@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 
 unsigned short PortFromSocket(int socket) {
@@ -57,7 +58,14 @@ void RemoveOpenedSocket(SocketAperti *os, int open_port) {
         return;
     }
     os->size--;
-    os->sockets[index] = os->sockets[os->size];
+    /* Shutdown e spenge il socket */
+    shutdown(os->sockets[index].socket, SHUT_RDWR);
+    close(os->sockets[index].socket);
+    /* Invalida i dati per sicurezza */
+    os->sockets[index].thread_id = -1;
+    os->sockets[index].open_port = -1;
+    os->sockets[index].socket = -1;
+
     os->sockets = realloc(os->sockets, sizeof(OpenedSocket) * os->size);
 }
 

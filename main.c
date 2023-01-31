@@ -1,6 +1,8 @@
+/*
+ * Questo file contiene il main del server
+ */
 #include "main.h"
-#include "FtpCommands.h"
-#include "FileTable.h"
+
 #include "WorkerThread.h"
 
 #include <stdio.h>
@@ -8,7 +10,6 @@
 #include <sys/socket.h>
 #include <sys/sendfile.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
@@ -31,8 +32,9 @@ int main(int argc, char **argv) {
     srand(time(NULL));  /* Inizializzazione del generatore di numeri casuali */
 
     /* Variabili locali */
-    int socket_desc, socket_client, *new_sock, c;
-    struct sockaddr_in server, client;
+    int socket_client = -1;
+    int socket_desc, *new_sock, c;
+    struct sockaddr_in server, client = {0};
 
     /* Inizializzazione lista socket aperti e tabella file */
     socketAperti = CreateOpenedSockets();
