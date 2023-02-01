@@ -5,6 +5,9 @@
 #include <pthread.h>
 #include "SocketAperti.h"
 
+/* Quanti byte alla volta ricevere con STOR */
+#define CHUNK_SIZE 1000000
+
 /* Una richiesta è costituita dal comando e dagli eventuali parametri */
 typedef struct {
     char *comando;

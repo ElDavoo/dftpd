@@ -41,7 +41,7 @@ TabellaFile *CreaTabellaFile();
 void AggiungiFile(TabellaFile *ft, FileVirtuale file);
 
 /* Restituisce l'indice del file nella tabella, -1 se non esiste */
-FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica, char *contenutoFile);
+FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica, void *contenutoFile);
 
 /* Crea un nuovo file */
 int CercaFile(TabellaFile *ft, char *nomeFile);

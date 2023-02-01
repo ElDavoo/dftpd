@@ -22,7 +22,7 @@ void AggiungiFile(TabellaFile *ft, FileVirtuale file) {
 }
 
 /* Crea un nuovo file */
-FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica, char *contenutoFile) {
+FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica, void *contenutoFile) {
     FileVirtuale file;
     /* Crea le strutture di sincronizzazzione */
     file.sync = malloc(sizeof(LettoriScrittori));
@@ -43,7 +43,7 @@ FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica,
     file.dataModifica = dataModifica;
     /* Copia il contenuto in un nuovo puntatore */
     file.contenuto = calloc(strlen(contenutoFile) + 1, sizeof(char));
-    strncpy(file.contenuto, contenutoFile, strlen(contenutoFile));
+    memcpy(file.contenuto, contenutoFile, dimensioneFile);
     return file;
 }
 
@@ -124,11 +124,8 @@ void SovrascriviFile(TabellaFile *tf, char *nomeFile, void *nuovoContenuto, size
     }
     /* Butta via il vecchio contenuto e ne crea uno nuovo */
     free(tf->files[index].contenuto);
-    tf->files[index].contenuto = calloc(dimensioneNuovoContenuto + 1, sizeof(char));
-    strncpy(tf->files[index].contenuto, nuovoContenuto, dimensioneNuovoContenuto);
-    /* Si assicura che la stringa sia terminata */
-    char *contenuto = tf->files[index].contenuto;
-    contenuto[strlen(nuovoContenuto)] = '\0';
+    tf->files[index].contenuto = calloc(dimensioneNuovoContenuto, sizeof(char));
+    memcpy(tf->files[index].contenuto, nuovoContenuto, dimensioneNuovoContenuto);
     tf->files[index].dimensione = dimensioneNuovoContenuto;
     tf->files[index].dataModifica = GetCurrentTime();
 

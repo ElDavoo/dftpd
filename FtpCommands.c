@@ -603,7 +603,8 @@ void OnSyst(int socket, SocketAperto *data_socket, char *args) {
 void OnStor(int socket, SocketAperto *data_socket, char *args) {
 
     /* Il buffer temporaneo in cui verrà salvato il file */
-    char file[1000000];
+    void *buffer = malloc(0);
+    char temp_chunk[CHUNK_SIZE];
 
     printf("Thread %4lu:\tSTOR: blocco il socket\n", pthread_self() % 10000);
     pthread_mutex_lock(&data_socket->mutex);
@@ -694,12 +695,12 @@ void OnStor(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 150);
 
     /* Riceve e aggiorna il numero di byte ricevuti */
-    while ((bytes_read = recv(data_sk, file + file_size, 1000000 - file_size, 0)) > 0) {
+    while ((bytes_read = recv(data_sk, temp_chunk, CHUNK_SIZE, 0)) > 0) {
         file_size += bytes_read;
+        buffer = realloc(buffer, file_size);
+        memcpy(buffer + file_size - bytes_read, temp_chunk, bytes_read);
     }
 
-    /* Mette un terminatore di stringa */
-    file[file_size] = '\0';
     printf("Thread %4lu:\tSTOR: Ricevuti %zd byte\n", pthread_self() % 10000, file_size);
 
     /* Blocca la tabella dei file */
@@ -709,8 +710,9 @@ void OnStor(int socket, SocketAperto *data_socket, char *args) {
 
     sync = tabellaFile->files[file_index].sync;
 
-    SovrascriviFile(tabellaFile, args, file, file_size);
+    SovrascriviFile(tabellaFile, args, buffer, file_size);
 
+    free(buffer);
 
     /* Possiamo sbloccare tutto */
     printf("Thread %4lu:\tSTOR: blocco il file\n", pthread_self() % 10000);
