@@ -68,6 +68,10 @@ void RimuoviSocketAperto(ListaSocketAperto *lista, int porta) {
     lista->sockets[index].porta = -1;
     lista->sockets[index].socket = -1;
 
+    /* Sposta tutti gli elementi successivi di una posizione indietro */
+    for (int i = index; i < lista->dimensione; i++) {
+        lista->sockets[i] = lista->sockets[i + 1];
+    }
     lista->sockets = realloc(lista->sockets, sizeof(SocketAperto) * lista->dimensione);
 }
 

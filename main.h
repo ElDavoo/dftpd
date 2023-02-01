@@ -2,6 +2,7 @@
 #ifndef DFTP_MAIN_H
 #define DFTP_MAIN_H
 
+#include <pthread.h>
 #include "SocketAperti.h"
 #include "TabellaFile.h"
 

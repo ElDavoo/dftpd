@@ -1,12 +1,14 @@
 /* Implementa una semplice tabella di file
  * Questi file sono virtuali e risiedono solo nella memoria del server */
 #include "TabellaFile.h"
+#include "FtpCommands.h"
 #include <string.h>
 #include <stdlib.h>
 
 /* Crea una tabella di file vuota */
 TabellaFile *CreaTabellaFile() {
     TabellaFile *tf = malloc(sizeof(TabellaFile));
+    pthread_mutex_init(&tf->mutex, NULL);
     tf->dimensione = 0;
     tf->files = malloc(sizeof(FileVirtuale) * tf->dimensione);
     return tf;
@@ -22,13 +24,24 @@ void AggiungiFile(TabellaFile *ft, FileVirtuale file) {
 /* Crea un nuovo file */
 FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica, char *contenutoFile) {
     FileVirtuale file;
-    // Copia il nome in un nuovo puntatore e lo zero-termina
+    /* Crea le strutture di sincronizzazzione */
+    file.sync = malloc(sizeof(LettoriScrittori));
+    pthread_mutex_init(&file.sync->mutex, NULL);
+    /* Il valore iniziale di s_lettori e s_scrittori deve essere 0 */
+    sem_init(&file.sync->s_lettori, 0, 0);
+    sem_init(&file.sync->s_scrittori, 0, 0);
+    file.sync->lettori_attivi = 0;
+    file.sync->scrittore_attivo = false;
+    file.sync->lettori_bloccati = 0;
+    file.sync->scrittori_bloccati = 0;
+
+    /* Copia il nome in un nuovo puntatore e lo zero-termina */
     file.nome = malloc(sizeof(char) * (strlen(nomeFile) + 1));
     strncpy(file.nome, nomeFile, strlen(nomeFile));
     file.nome[strlen(nomeFile)] = '\0';
     file.dimensione = dimensioneFile;
     file.dataModifica = dataModifica;
-    // Copia il contenuto in un nuovo puntatore
+    /* Copia il contenuto in un nuovo puntatore */
     file.contenuto = calloc(strlen(contenutoFile) + 1, sizeof(char));
     strncpy(file.contenuto, contenutoFile, strlen(contenutoFile));
     return file;
@@ -42,18 +55,6 @@ int CercaFile(TabellaFile *ft, char *nomeFile) {
         }
     }
     return -1;
-}
-
-/* Ottiene un FileVirtuale dalla tabella, se esiste. Altrimenti restituisce un FileVirtuale vuoto */
-FileVirtuale OttieniFile(TabellaFile *tf, char *nomeFile) {
-    int indice = CercaFile(tf, nomeFile);
-    if (indice == -1) {
-        FileVirtuale file;
-        file.nome = NULL;
-        file.dimensione = 0;
-        return file;
-    }
-    return tf->files[indice];
 }
 
 /* Ottiene la lista dei file in un formato adatto al comando MLSD */
@@ -84,6 +85,18 @@ void RimuoviFile(TabellaFile *tf, char *name) {
     tf->files[indiceFile].contenuto = NULL;
     tf->files[indiceFile].dimensione = 0;
     tf->files[indiceFile].dataModifica = 0;
+
+    /* Cancella le strutture di sincronizzazione */
+    pthread_mutex_destroy(&tf->files[indiceFile].sync->mutex);
+    sem_destroy(&tf->files[indiceFile].sync->s_lettori);
+    sem_destroy(&tf->files[indiceFile].sync->s_scrittori);
+    free(tf->files[indiceFile].sync);
+    tf->files[indiceFile].sync = NULL;
+
+    /* Sposta tutti i file successivi di una posizione indietro */
+    for (int i = indiceFile; i < tf->dimensione; i++) {
+        tf->files[i] = tf->files[i + 1];
+    }
     tf->files = realloc(tf->files, sizeof(FileVirtuale) * tf->dimensione);
 }
 
@@ -100,5 +113,24 @@ void RinominaFile(TabellaFile *tf, char *nomeOriginale, char *nuovoNome) {
     strncpy(tf->files[index].nome, nuovoNome, strlen(nuovoNome));
     /* Si assicura che la stringa sia terminata */
     tf->files[index].nome[strlen(nuovoNome)] = '\0';
+}
+
+/* Sovrascrive un file con un nuovo contenuto */
+void SovrascriviFile(TabellaFile *tf, char *nomeFile, void *nuovoContenuto, size_t dimensioneNuovoContenuto) {
+    int index = CercaFile(tf, nomeFile);
+    if (index == -1) {
+        /* Non fare niente se il file non esiste */
+        return;
+    }
+    /* Butta via il vecchio contenuto e ne crea uno nuovo */
+    free(tf->files[index].contenuto);
+    tf->files[index].contenuto = calloc(dimensioneNuovoContenuto + 1, sizeof(char));
+    strncpy(tf->files[index].contenuto, nuovoContenuto, dimensioneNuovoContenuto);
+    /* Si assicura che la stringa sia terminata */
+    char *contenuto = tf->files[index].contenuto;
+    contenuto[strlen(nuovoContenuto)] = '\0';
+    tf->files[index].dimensione = dimensioneNuovoContenuto;
+    tf->files[index].dataModifica = GetCurrentTime();
+
 }
 

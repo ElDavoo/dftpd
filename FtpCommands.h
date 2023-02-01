@@ -28,6 +28,7 @@ extern pthread_mutex_t lock;
 extern pthread_mutex_t file_to_rename_lock;
 extern char *file_to_rename;
 void MandaRisposta(int socket, int codiceRisposta);
+long GetCurrentTime();
 
 /* Definisce tutte le funzioni che gestiscono i comandi*/
 void OnCwd(int socket, SocketAperto *data_socket, char *args);

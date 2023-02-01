@@ -3,17 +3,33 @@
 #define DFTP_TABELLAFILE_H
 
 #include <stdio.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <semaphore.h>
+
+/* Definisce le variabili necessarie a risolvere il problema lettori-scrittory */
+typedef struct {
+    pthread_mutex_t mutex;
+    sem_t s_lettori;
+    sem_t s_scrittori;
+    int lettori_attivi;
+    bool scrittore_attivo;
+    int lettori_bloccati;
+    int scrittori_bloccati;
+} LettoriScrittori;
 
 /* Definisce un file, che è costituito da un nome, una dimensione, una data di modifica e il contenuto */
 typedef struct {
+    LettoriScrittori *sync;
     char *nome;
-    ssize_t dimensione;
+    unsigned long dimensione;
     long dataModifica;
     void *contenuto;
 } FileVirtuale;
 
 /* Definisce una tabella di file, quindi un array di FileVirtuali e la sua dimensione */
 typedef struct {
+    pthread_mutex_t mutex;
     int dimensione;
     FileVirtuale *files;
 } TabellaFile;
@@ -30,9 +46,6 @@ FileVirtuale CreaFile(char *nomeFile, ssize_t dimensioneFile, long dataModifica,
 /* Crea un nuovo file */
 int CercaFile(TabellaFile *ft, char *nomeFile);
 
-/* Ottiene un FileVirtuale dalla tabella, se esiste. Altrimenti restituisce un FileVirtuale vuoto */
-FileVirtuale OttieniFile(TabellaFile *tf, char *nomeFile);
-
 /* Ottiene la lista dei file in un formato adatto al comando MLSD */
 char *ListaFileMlsd(TabellaFile *file_table);
 
@@ -42,4 +55,6 @@ void RimuoviFile(TabellaFile *tf, char *name);
 /* Rinomina un file */
 void RinominaFile(TabellaFile *tf, char *nomeOriginale, char *nuovoNome);
 
+/* Sovrascrive un file */
+void SovrascriviFile(TabellaFile *tf, char *nomeFile, void *nuovoContenuto, size_t dimensioneNuovoContenuto);
 #endif //DFTP_TABELLAFILE_H

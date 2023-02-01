@@ -8,10 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/sendfile.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <time.h>
 #include <stdbool.h>
 
@@ -20,6 +18,8 @@ ListaSocketAperto *socketAperti;
 
 /* Puntatore globale alla tabella dei file */
 TabellaFile *tabellaFile;
+/* Mutex per la tabella dei file */
+pthread_mutex_t mutexTabellaFile = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char **argv) {
 

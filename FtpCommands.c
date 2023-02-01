@@ -115,14 +115,35 @@ void OnCwd(int socket, SocketAperto *data_socket, char *args) {
 /* Comando DELE: Chiede la cancellazione di un file */
 void OnDele(int socket, SocketAperto *data_socket, char *nomeFile) {
 
-    if (CercaFile(tabellaFile, nomeFile) == -1) {
+    /* Blocca la tabella dei file */
+    pthread_mutex_lock(&tabellaFile->mutex);
 
+    int index = CercaFile(tabellaFile, nomeFile);
+    if (index == -1) {
+        pthread_mutex_unlock(&tabellaFile->mutex);
         MandaRisposta(socket, 550);
         return;
 
     }
 
+    /* Cancelliamo il file solo se non è in uso da nessuno */
+    pthread_mutex_lock(&tabellaFile->files[index].sync->mutex);
+    if (tabellaFile->files[index].sync->scrittori_bloccati > 0 ||
+        tabellaFile->files[index].sync->lettori_bloccati > 0 ||
+        tabellaFile->files[index].sync->scrittore_attivo == true ||
+        tabellaFile->files[index].sync->lettori_attivi > 0
+        ) {
+        pthread_mutex_unlock(&tabellaFile->files[index].sync->mutex);
+        pthread_mutex_unlock(&tabellaFile->mutex);
+        MandaRisposta(socket, 550);
+        return;
+    }
+
+    /* Se non è in uso, allora lo cancelliamo */
     RimuoviFile(tabellaFile, nomeFile);
+
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
     MandaRisposta(socket, 250);
 
 }
@@ -335,14 +356,68 @@ void OnRetr(int socket, SocketAperto *data_socket, char *args) {
         return;
     }
 
+    /* Blocchiamo la tabella dei file */
+    pthread_mutex_lock(&tabellaFile->mutex);
+
+    /* Cerchiamo il file */
+    int index = CercaFile(tabellaFile, args);
+    if (index == -1) {
+        /* Il file non esiste */
+        pthread_mutex_unlock(&tabellaFile->mutex);
+        MandaRisposta(socket, 550);
+        return;
+    }
+
     /* Ottiene il file */
-    FileVirtuale file = OttieniFile(tabellaFile, args);
+    FileVirtuale file = tabellaFile->files[index];
+
+    LettoriScrittori *sync = file.sync;
+
+    pthread_mutex_lock(&sync->mutex);
+    if (!sync->scrittore_attivo && sync->scrittori_bloccati == 0 ){
+        sync->lettori_attivi++;
+        sem_post(&sync->s_lettori);
+    } else {
+        sync->lettori_bloccati++;
+    }
+    pthread_mutex_unlock(&sync->mutex);
+
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
+    /* Aspetta che il file sia pronto */
+    sem_wait(&sync->s_lettori);
 
     /* Annuncia l'inizio della trasmissione */
     MandaRisposta(socket, 150);
 
     /* Manda il file attraverso il socket dati */
     send(data_sk, file.contenuto, file.dimensione, 0);
+
+    /* Blocchiamo la tabella dei file */
+    pthread_mutex_lock(&tabellaFile->mutex);
+
+    /* Cerchiamo il file */
+    index = CercaFile(tabellaFile, args);
+    if (index == -1) {
+        /* Il file è stato cancellato */
+        pthread_mutex_unlock(&tabellaFile->mutex);
+        MandaRisposta(socket, 226);
+        return;
+    }
+
+    sync = tabellaFile->files[index].sync;
+
+    pthread_mutex_lock(&sync->mutex);
+    sync->lettori_attivi--;
+    if (sync->lettori_attivi == 0 && sync->scrittori_bloccati > 0) {
+        sync->scrittore_attivo = true;
+        sync ->scrittori_bloccati--;
+        sem_post(&sync->s_scrittori);
+    }
+    pthread_mutex_unlock(&sync->mutex);
+
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
 
     /* Chiude il socket dati specifico */
     shutdown(data_sk, SHUT_RDWR);
@@ -377,8 +452,10 @@ void OnRnto(int socket, SocketAperto *data_socket, char *args) {
         MandaRisposta(socket, 503);
         return;
     }
+    pthread_mutex_lock(&tabellaFile->mutex);
     /* Controlla se esiste già un file con quel nome */
     if (CercaFile(tabellaFile, args) != -1) {
+        pthread_mutex_unlock(&tabellaFile->mutex);
         free(file_to_rename);
         file_to_rename = NULL;
         pthread_mutex_unlock(&file_to_rename_lock);
@@ -386,8 +463,13 @@ void OnRnto(int socket, SocketAperto *data_socket, char *args) {
         return;
     }
 
+    pthread_mutex_lock(&tabellaFile->mutex);
+
     /* Rinomina il file */
     RinominaFile(tabellaFile, file_to_rename, args);
+
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
     free(file_to_rename);
     file_to_rename = NULL;
     pthread_mutex_unlock(&file_to_rename_lock);
@@ -395,22 +477,39 @@ void OnRnto(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 250);
 }
 
+/* Comando SYST: restituisce il sistema operativo */
 void OnSyst(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 215);
 }
 
+/* Ottiene la data corrente in formato YYYYMMDDHHMMSS */
+long GetCurrentTime() {
+    /* Il buffer in cui verrà memorizzata la data di modifica temporaneamente */
+    char s[64];
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    strftime(s, sizeof(s), "%Y%m%d%H%M%S", tm);
+    long time = atol(s);
+    return time;
+}
+
+/* Comando STOR: riceve un file dal client */
 void OnStor(int socket, SocketAperto *data_socket, char *args) {
-    // Check if the data socket is open
+
+    /* Il buffer temporaneo in cui verrà salvato il file */
+    char file[1000000];
+
     if (data_socket == NULL) {
         MandaRisposta(socket, 425);
         return;
     }
-    // Check if the data socket is listening
+
     if (data_socket->socket == -1) {
         MandaRisposta(socket, 425);
         return;
     }
-    // Accept the connection
+
+    /* Accetta la connessione */
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
     int data_sk = accept(data_socket->socket, (struct sockaddr *) &addr, &addr_len);
@@ -418,52 +517,111 @@ void OnStor(int socket, SocketAperto *data_socket, char *args) {
         MandaRisposta(socket, 425);
         return;
     }
-    // Send the response
-    MandaRisposta(socket, 150);
-    // Receive the file here and save it into a string without calling functions
-    char *file = malloc(1000000);
-    // Fill with FF
-    memset(file, 0xFF, 1000000);
+
     ssize_t file_size = 0;
     ssize_t bytes_read = 0;
+
+    /* Blocca la tabella dei file */
+    pthread_mutex_lock(&tabellaFile->mutex);
+
+    /* Cerca se esiste già un file con quel nome */
+    int file_index = CercaFile(tabellaFile, args);
+    /* Se non esiste, crea un file vuoto */
+    if (file_index == -1) {
+        FileVirtuale file_done = CreaFile(args, 0, 0, "");
+        AggiungiFile(tabellaFile, file_done);
+        file_index = CercaFile(tabellaFile, args);
+    }
+
+    LettoriScrittori *sync = tabellaFile->files[file_index].sync;
+
+    /* Blocca il file */
+    pthread_mutex_lock(&sync->mutex);
+    if (sync->lettori_attivi == 0 && !sync->scrittore_attivo) {
+        /* Signal al semaforo s_scrittori*/
+        sem_post(&sync->s_scrittori);
+        sync->scrittore_attivo = true;
+    } else {
+        sync->scrittori_bloccati++;
+        /* In alternativa a far attendere il client, potrebbe
+         * essere possibile rifiutare la richiesta
+        pthread_mutex_unlock(&sync->mutex);
+        pthread_mutex_unlock(&tabellaFile->mutex);
+        MandaRisposta(socket, 550);
+        return; */
+    }
+    /* Sblocca il file */
+    pthread_mutex_unlock(&sync->mutex);
+
+
+    /* Sblocca la tabella dei file */
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
+    /* Aspetta il semaforo s_scrittori */
+    sem_wait(&sync->s_scrittori);
+
+    /* Segnala che siamo pronti a ricevere */
+    MandaRisposta(socket, 150);
+
+    /* Riceve e aggiorna il numero di byte ricevuti */
     while ((bytes_read = recv(data_sk, file + file_size, 1000000 - file_size, 0)) > 0) {
         file_size += bytes_read;
     }
-    file = realloc(file, file_size + 1);
+
+    /* Mette un terminatore di stringa */
     file[file_size] = '\0';
     printf("Thread %4lu:\tSTOR: Received %zd bytes\n", pthread_self() % 10000, file_size);
-    // printf("Thread %d, STOR: FileVirtuale contenuto: %s\n", pthread_self() % 100, file);
-    // Get the current time as YYYYMMDDHHMMSS.sss
-    time_t t = time(NULL);
-    struct tm *tm = localtime(&t);
-    char s[64];
-    strftime(s, sizeof(s), "%Y%m%d%H%M%S", tm);
-    // as int
-    long time = atol(s);
 
-    RimuoviFile(tabellaFile, args);
-    // Save the file into the file table
-    FileVirtuale file_done = CreaFile(args, file_size, time, file);
-    AggiungiFile(tabellaFile, file_done);
+    /* Ottiene la data di modifica */
+    long time = GetCurrentTime();
 
-    // Close the data socket
+    pthread_mutex_lock(&tabellaFile->mutex);
+
+    sync = tabellaFile->files[file_index].sync;
+
+    SovrascriviFile(tabellaFile, args, file, file_size);
+
+
+    /* Possiamo sbloccare tutto */
+    pthread_mutex_lock(&sync->mutex);
+    sync->scrittore_attivo = false;
+    if (sync->lettori_bloccati > 0) {
+        do {
+            sync->lettori_attivi++;
+            sync->lettori_bloccati--;
+            /* Signal al semaforo s_lettori */
+            sem_post(&sync->s_lettori);
+        } while (sync->lettori_bloccati != 0);
+
+    } else if (sync->scrittori_bloccati > 0) {
+        sync->scrittore_attivo = true;
+        sync->scrittori_bloccati--;
+        /* Signal al semaforo s_scrittori */
+        sem_post(&sync->s_scrittori);
+    }
+    pthread_mutex_unlock(&sync->mutex);
+
+    pthread_mutex_unlock(&tabellaFile->mutex);
+
+    /* Chiude la connessione */
     shutdown(data_sk, SHUT_RDWR);
     close(data_sk);
-    shutdown(data_socket->socket, SHUT_RDWR);
-    close(data_socket->socket);
-    // Remove the data socket from the list
+
+    /* Rimuove il socket dalla lista */
     RimuoviSocketAperto(socketAperti, data_socket->porta);
     data_socket->socket = -1;
     data_socket->porta = 0;
-    // Send the response
+
+    /* Manda la risposta finale */
     MandaRisposta(socket, 226);
-    free(file);
 }
 
+/* Comando TYPE: imposta il tipo di trasferimento */
 void OnType(int socket, SocketAperto *data_socket, char *args) {
     MandaRisposta(socket, 200);
 }
 
+/* Comando USER: imposta l'utente */
 void OnUser(int socket, SocketAperto *data_socket, char *username) {
     MandaRisposta(socket, 230);
 }
