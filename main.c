@@ -18,8 +18,6 @@ ListaSocketAperto *socketAperti;
 
 /* Puntatore globale alla tabella dei file */
 TabellaFile *tabellaFile;
-/* Mutex per la tabella dei file */
-pthread_mutex_t mutexTabellaFile = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char **argv) {
 
@@ -32,8 +30,7 @@ int main(int argc, char **argv) {
     srand(time(NULL));  /* Inizializzazione del generatore di numeri casuali */
 
     /* Variabili locali */
-    int socket_client = -1;
-    int socket_desc, *new_sock;
+    int socket_client, socket_desc, *new_sock;
     struct sockaddr_in server, client = {0};
     int c = sizeof(struct sockaddr_in);
 

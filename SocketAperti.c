@@ -26,17 +26,6 @@ ListaSocketAperto *CreaSocketAperti() {
     return lista;
 }
 
-/* Crea un nuovo socket aperto a partire da un socket */
-SocketAperto *CreaSocket(int socket) {
-    SocketAperto *os = malloc(sizeof(SocketAperto));
-    // Get the open port from the socket
-    os->porta = PortaDaSocket(socket);
-    os->socket = socket;
-    // get the current thread id
-    os->idThread = pthread_self();
-    return os;
-}
-
 /* Aggiunge un socket aperto alla lista */
 void AddOpenedSocket(ListaSocketAperto *lista, SocketAperto *socket) {
     lista->dimensione++;

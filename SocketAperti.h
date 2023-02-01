@@ -24,9 +24,6 @@ unsigned short PortaDaSocket(int socket);
 /* Crea una lista vuota di socket aperti */
 ListaSocketAperto *CreaSocketAperti();
 
-/* Crea un nuovo socket aperto a partire da un socket */
-SocketAperto *CreaSocket(int socket);
-
 /* Aggiunge un socket aperto alla lista */
 void AddOpenedSocket(ListaSocketAperto *lista, SocketAperto *socket);
 

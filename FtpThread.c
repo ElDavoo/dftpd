@@ -14,7 +14,7 @@
 #include "main.h"
 
 /* Associa un comando con la funzione che lo gestisce in FtpCommands.c */
-Command comandiGestiti[] = {
+Comando comandiGestiti[] = {
         {"CWD",  OnCwd},
         {"DELE", OnDele},
         {"FEAT", OnFeat},

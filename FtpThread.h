@@ -15,6 +15,6 @@ void *ThreadMain(void *socket_desc);
 typedef struct {
     char *comando;
     void (*function)(int socket, SocketAperto *data_socket, char *args);
-} Command;
+} Comando;
 
 #endif //DFTP_FTPTHREAD_H

@@ -577,10 +577,6 @@ void OnRnto(int socket, SocketAperto *data_socket, char *args) {
         return;
     }
 
-    printf("Thread %lu:\tRNTO: blocco la tabella dei file\n", pthread_self() % 10000);
-    pthread_mutex_lock(&tabellaFile->mutex);
-    printf("Thread %lu:\tRNTO: tabella dei file bloccata\n", pthread_self() % 10000);
-
     /* Rinomina il file */
     RinominaFile(tabellaFile, file_to_rename, args);
 
@@ -704,9 +700,6 @@ void OnStor(int socket, SocketAperto *data_socket, char *args) {
     /* Mette un terminatore di stringa */
     file[file_size] = '\0';
     printf("Thread %4lu:\tSTOR: Ricevuti %zd byte\n", pthread_self() % 10000, file_size);
-
-    /* Ottiene la data di modifica */
-    long time = GetCurrentTime();
 
     /* Blocca la tabella dei file */
     printf("Thread %4lu:\tSTOR: blocco la tabella file\n", pthread_self() % 10000);
