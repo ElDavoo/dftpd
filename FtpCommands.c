@@ -53,15 +53,16 @@ long GetCurrentTime() {
 void MandaAlSocket(int socket, char *comando) {
     /* Viene creata una stringa temporanea */
     size_t oldLunghezza = strlen(comando);
-    char *comandoConCR = malloc(oldLunghezza + 2);
+    char *comandoConCR = malloc(oldLunghezza + 3);
     strncpy(comandoConCR, comando, oldLunghezza);
 
     /* Viene aggiunto il carattere di fine riga e un null terminate */
-    comandoConCR[oldLunghezza + 1] = '\0';
     comandoConCR[oldLunghezza] = '\r';
+    comandoConCR[oldLunghezza + 1] = '\n';
+    comandoConCR[oldLunghezza + 2] = '\0';
 
     /* Viene inviata la stringa e viene liberata la memoria */
-    send(socket, comandoConCR, oldLunghezza + 1, 0);
+    send(socket, comandoConCR, oldLunghezza + 2, 0);
     free(comandoConCR);
 }
 
