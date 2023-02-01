@@ -96,14 +96,12 @@ void *ThreadMain(void *socket_desc) {
     // Stampa il messaggio di benvenuto alla connessione
     MandaRisposta(socket, 220);
 
-    //init lock
-    pthread_mutex_init(&lock, NULL);
-
     /* Inizializza un socket dati aperto, locale per ogni thread */
     SocketAperto data_socket;
     data_socket.socket = -1;
     data_socket.idThread = pthread_self();
     data_socket.porta = 0;
+    pthread_mutex_init(&data_socket.mutex, NULL);
 
     while (1) {
 
@@ -120,21 +118,23 @@ void *ThreadMain(void *socket_desc) {
             printf("Thread %4lu:\tClient disconnesso, pulisco ed esco\n", pthread_self() % 10000);
             /* Controlla se c'era un file che stava venendo rinominato */
             if (file_to_rename != NULL) {
-                pthread_mutex_unlock(&file_to_rename_lock);
                 free(file_to_rename);
                 file_to_rename = NULL;
+                pthread_mutex_unlock(&file_to_rename_lock);
             }
 
             /* Chiudo tutti i socket aperti dal thread */
+            pthread_mutex_lock(&socketAperti->mutex);
             for (int i = 0; i < socketAperti->dimensione; i++) {
 
                 if (socketAperti->sockets[i].idThread == pthread_self()) {
 
-                    RimuoviSocketAperto(socketAperti, socketAperti->sockets[i].porta);
+                    RimuoviChiudiSocketAperto(socketAperti, socketAperti->sockets[i].porta);
 
                 }
 
             }
+            pthread_mutex_unlock(&socketAperti->mutex);
 
             break;
 
@@ -149,7 +149,7 @@ void *ThreadMain(void *socket_desc) {
 
     /* Distrugge il socket ed esce dal thread */
     free(socket_desc);
-    pthread_mutex_destroy(&lock);
+    pthread_mutex_destroy(&data_socket.mutex);
     return NULL;
 
 }

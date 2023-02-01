@@ -22,6 +22,7 @@ ListaSocketAperto *CreaSocketAperti() {
     ListaSocketAperto *lista = malloc(sizeof(ListaSocketAperto));
     lista->dimensione = 0;
     lista->sockets = NULL;
+    pthread_mutex_init(&lista->mutex, NULL);
     return lista;
 }
 
@@ -54,7 +55,7 @@ int CercaSocketConPorta(ListaSocketAperto *lista, int porta) {
 }
 
 /* Rimuove un socket aperto dalla lista */
-void RimuoviSocketAperto(ListaSocketAperto *lista, int porta) {
+void RimuoviChiudiSocketAperto(ListaSocketAperto *lista, int porta) {
     int index = CercaSocketConPorta(lista, porta);
     if (index == -1) {
         return;
@@ -67,6 +68,7 @@ void RimuoviSocketAperto(ListaSocketAperto *lista, int porta) {
     lista->sockets[index].idThread = -1;
     lista->sockets[index].porta = -1;
     lista->sockets[index].socket = -1;
+    pthread_mutex_destroy(&lista->sockets[index].mutex);
 
     /* Sposta tutti gli elementi successivi di una posizione indietro */
     for (int i = index; i < lista->dimensione; i++) {

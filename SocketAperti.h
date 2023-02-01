@@ -2,14 +2,18 @@
 #ifndef DFTP_SOCKETAPERTI_H
 #define DFTP_SOCKETAPERTI_H
 
+#include <pthread.h>
+
 /* Un socket aperto è composto dall'id del thread che lo ha aperto, dalla porta e dal socket */
 typedef struct {
+    pthread_mutex_t mutex;
     unsigned long idThread;
     unsigned short porta;
     int socket;
 } SocketAperto;
 
 typedef struct {
+    pthread_mutex_t mutex;
     int dimensione;
     SocketAperto *sockets;
 } ListaSocketAperto;
@@ -30,6 +34,6 @@ void AddOpenedSocket(ListaSocketAperto *lista, SocketAperto *socket);
 int CercaSocketConPorta(ListaSocketAperto *lista, int porta);
 
 /* Rimuove un socket aperto dalla lista */
-void RimuoviSocketAperto(ListaSocketAperto *lista, int porta);
+void RimuoviChiudiSocketAperto(ListaSocketAperto *lista, int porta);
 
 #endif //DFTP_SOCKETAPERTI_H
