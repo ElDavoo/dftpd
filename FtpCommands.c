@@ -325,7 +325,9 @@ void OnPasv(int sk, SocketAperto *data_socket, char *args) {
     socklen_t sk_addr_len = sizeof(sk_addr);
     getsockname(sk, (struct sockaddr *) &sk_addr, &sk_addr_len);
 
+    printf("Thread %4lu:\tPASV: Blocco lista socket aperti\n", pthread_self() % 10000);
     pthread_mutex_lock(&socketAperti->mutex);
+    printf("Thread %4lu:\tPASV: Lista socket aperti bloccata\n", pthread_self() % 10000);
 
     while (1) {
         /* Genera un numero di porta casuale */
@@ -344,7 +346,6 @@ void OnPasv(int sk, SocketAperto *data_socket, char *args) {
         }
         printf("Thread %4lu:\tbindResult == -1: ", pthread_self() % 10000);
         perror("");
-        printf("\n");
     }
     // Listen
     if (listen(data_socket->socket, 1) == -1) {
